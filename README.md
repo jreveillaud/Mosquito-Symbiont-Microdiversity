@@ -1,4 +1,4 @@
-This project describes the reproductible workflow associated to the paper " The mosquito microbiome includes habitat-specific but rare symbionts". 
+This project describes the bioinformatic reproductible workflow associated to the paper " The mosquito microbiome includes habitat-specific but rare symbionts". 
 
 ## Downloading the fastq files
 Before everything else, you need to download the data and edit the paths file (available in /script/source/paths.R).
