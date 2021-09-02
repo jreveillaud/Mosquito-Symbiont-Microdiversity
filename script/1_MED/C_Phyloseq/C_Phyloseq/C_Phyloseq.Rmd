@@ -1,0 +1,329 @@
+---
+title: "Phyloseq"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+    code_folding: "hide"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("Biostrings", "openxlsx", "kableExtra", "cowplot")
+invisible(lapply(packages, require, character.only = TRUE))
+```
+
+# Tables preparation
+
+## Metadata
+```{r}
+#metadata <- read.csv(paste0(path_metadata,"/metadata_08_02_2021.csv"), sep=";")
+metadata <- read.csv(paste0(path_metadata,"/metadata_22_06_21.csv"), sep=";")
+rownames(metadata) <- metadata$Sample
+```
+
+## Seqtab
+```{r warning=FALSE}
+# import matrix count and fasta (no gaps) from MED 
+setwd(path_med) # matrix count venant de MED
+matrix_count <- read.table("MATRIX-COUNT.txt", header = TRUE) %>% t()
+fasta <- readDNAStringSet("NODE-REPRESENTATIVES.fasta")
+
+# format matrix count
+colnames(matrix_count) <- matrix_count[1,]
+matrix_count <- matrix_count[-1,]
+matrix_count <- matrix_count %>% as.data.frame()
+rownames(matrix_count) <- gsub(x=rownames(matrix_count), pattern="X", replacement="N")
+rownames(matrix_count) <- gsub(x=rownames(matrix_count), pattern="00000", replacement="")
+colnames(matrix_count) <- gsub(x=colnames(matrix_count), pattern="Sample-", replacement="")
+matrix_count$nodes <- rownames(matrix_count)
+
+# sequence format
+fasta <- fasta %>% as.data.frame()
+colnames(fasta) <- "seq"
+rownames(fasta) <- gsub(x=rownames(fasta), pattern="00000", replacement="")
+rownames(fasta) <- paste0("N", rownames(fasta))
+fasta$nodes <- rownames(fasta)
+fasta$nodes <- gsub(x=fasta$nodes, pattern="\\|.*", replacement="")
+# fasta$nodes <- paste0("N", fasta$nodes)
+# fasta$nodes <- gsub(x=fasta$nodes, pattern="00000", replacement = "")
+
+# remove gaps
+fasta$seq <- fasta$seq %>% gsub(pattern = "-", replacement = "")
+
+# create a sequences/nodes reference object
+ref_nodes_seq <- matrix_count %>% merge(fasta %>% dplyr::select(c(nodes, seq)), by="nodes")
+ref_nodes_seq <- ref_nodes_seq %>% dplyr::select(c(nodes, seq, everything()))
+rownames(ref_nodes_seq) <- ref_nodes_seq$seq
+ref_nodes_seq <- ref_nodes_seq %>% dplyr::select(c(nodes, seq))
+
+# final matrix count
+matrix_count <- matrix_count %>% dplyr::select(-c(nodes)) # with seq as rownames
+```
+
+## Taxonomy
+```{r warning=FALSE}
+# import tax table from assignment
+setwd(path_tsv)
+taxo <- read.table("1B_MED_nodes_taxo.tsv")
+
+# format tax table
+taxo$seq <- rownames(taxo)
+taxo <- taxo %>% dplyr::select(c(seq, everything()))
+
+# replace seq by nodes as rownames
+taxo_nodes <- taxo %>% merge(ref_nodes_seq, by="seq", sort=FALSE)
+taxo_nodes <- taxo_nodes %>% dplyr::select(c(seq, nodes, everything()))
+taxo <- taxo_nodes
+rownames(taxo_nodes) <- taxo_nodes$nodes
+taxo_nodes <- taxo_nodes %>% dplyr::select(c(seq, everything()))
+
+# final tax table with nodes as rownames
+taxo_nodes <- taxo_nodes %>% dplyr::select(-c(seq, nodes))
+```
+
+# Create phyloseq object
+```{r warning=FALSE}
+matrix_count <- matrix_count %>% as.matrix()
+class(matrix_count) <- "numeric"
+
+# phyloseq elements
+OTU = otu_table(as.matrix(matrix_count), taxa_are_rows =TRUE)
+TAX = tax_table(as.matrix(taxo_nodes))
+SAM = sample_data(metadata)
+
+# phyloseq object
+ps <- phyloseq(OTU, TAX, SAM)
+ps
+
+# add sequences in ps
+sequences <- Biostrings::DNAStringSet(taxo$seq)
+names(sequences) <- taxo$nodes
+#test1 <- sequences %>% as.data.frame()
+ps <- merge_phyloseq(ps, sequences)
+ps
+test2 <- refseq(ps) %>% as.data.frame()
+
+compute_read_counts(ps)
+
+# add columns with italic names
+ps@sam_data$Species_italic <- ps@sam_data$Species
+ps@sam_data$Strain_italic <- ps@sam_data$Strain
+
+levels(ps@sam_data$Species_italic)= c("Aedes aegypti"=make.italic("Aedes aegypti"),
+                               "Blank",
+                               "Culex pipiens"=make.italic("Culex pipiens"),
+                               "Culex quinquefasciatus"=make.italic("Culex quinquefasciatus"))
+
+levels(ps@sam_data$Strain_italic)[!levels(ps@sam_data$Strain_italic) %in% "Laboratory - Slab TC (Wolbachia -)"] <- gsub(" ", "~", levels(ps@sam_data$Strain_italic)[!levels(ps@sam_data$Strain_italic) %in% "Laboratory - Slab TC (Wolbachia -)"])
+
+levels(ps@sam_data$Strain_italic)[levels(ps@sam_data$Strain_italic) %in% "Laboratory - Slab TC (Wolbachia -)"] <- expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), "-)"))
+```
+
+# Number of read by sample
+```{r fig.height = 12, fig.width=14}
+sample_data(ps)$Read_depth <- sample_sums(ps)
+
+metadata_read <- data.frame(ps@sam_data)
+
+guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 10, face = "italic", colour = "Black", angle = 0)))
+
+p <- ggplot(metadata_read, aes(x = Sample, y = Read_depth))+ 
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col)+
+  theme_bw() +
+  ggtitle("") + 
+  guide_italics+
+  theme(legend.title = element_text(size = 18), 
+        legend.position="bottom",
+        legend.text=element_text(size=11), 
+        panel.spacing.y=unit(1, "lines"), 
+        panel.spacing.x=unit(0.8, "lines"),
+        panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        axis.ticks.x=element_blank(),
+        strip.text.x = element_text(size = 12),
+        axis.text.x = element_text(angle = 90)) +
+ facet_wrap(~Species_italic+Strain_italic+Organ, scales = "free_x", ncol=4, labeller=label_parsed)+
+  labs(y="Sequence counts")+
+  geom_text(aes(label=Read_depth), position=position_dodge(width=0.5), size=2, hjust=-0.25, vjust=0.25, angle=90)+
+  guides(fill=guide_legend(title="Oligotype"))
+
+p
+```
+
+# Distribution by Genus
+```{r}
+seqtab <- taxo %>% as.data.frame()
+df <- table(seqtab$Genus) %>% as.data.frame()
+
+p_distribution <- ggplot(df, aes(x=as.factor(Var1), y=Freq, fill=Var1))+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(x="Genus", y="Number of MED node")
+```
+
+
+# Number of read by Genus
+
+```{r}
+p <- plot_bar(ps, "Genus", "Abundance", "Genus")+
+  geom_bar(aes(color=Genus, fill=Genus), stat="identity", position="stack")+
+  labs(x="Genus", y="Number of read")
+
+
+test <- data.frame(p$data)
+test2 <- test %>% group_by(Genus) %>% summarise(reads = sum(Abundance))
+
+test2 %>%
+  kbl() %>%
+  kable_paper("hover", full_width = F)
+
+legend_plot <- get_legend(p_distribution + theme(legend.position="bottom"))
+
+# panels
+p_group <- plot_grid(p_distribution+theme(legend.position="none"), 
+          p+theme(legend.position="none"), 
+          nrow=1, 
+          ncol=2)+
+    draw_plot_label(c("A", "B"), c(0, 0.5), c(1, 1), size = 20)
+
+p_group
+```
+
+
+# Make Supplementary Table 1
+````{r warning=FALSE}
+setwd(path_xlsx)
+
+metadata_to_write <- data.frame(ps@sam_data) %>% select(-c(Species_italic, Strain_italic))
+count_table_to_write <- data.frame(ps@otu_table)
+tax_table_to_write <- data.frame(ps@tax_table)
+
+wb <- createWorkbook()
+addWorksheet(wb, "Metadata (123 x 15)")
+addWorksheet(wb, "Count table (70 x 123)")
+addWorksheet(wb, "Tax table (70 x 7)")
+
+writeData(wb, "Metadata (123 x 15)", metadata_to_write)
+writeData(wb, "Count table (70 x 123)", count_table_to_write, rowNames = TRUE)
+writeData(wb, "Tax table (70 x 7)", tax_table_to_write, rowNames = TRUE)
+
+saveWorkbook(wb, "1C_Supplementary_Table_1.xlsx", overwrite = TRUE)
+
+```
+
+# Culex pipiens, Culex quinque and Aedes aegypti counts
+
+## Culex pipiens
+```{r}
+# Culex pipiens
+cat("ps_pipiens\n\n")
+ps.pipiens <- subset_samples(ps, Species=="Culex pipiens")
+ps.pipiens <- check_ps(ps.pipiens)
+ps.pipiens
+cat(paste0("read count: ", compute_read_counts(ps.pipiens), "\n\n"))
+
+ps.pipiens.field <- ps.pipiens %>% subset_samples(Field=="Field")
+ps.pipiens.field <- ps.pipiens.field %>% check_ps()
+
+# Culex pipiens - Bosc
+cat("ps_pipiens_field_bosc\n\n")
+ps.pipiens.field.bosc <- ps.pipiens.field %>% subset_samples(Strain=="Field - Bosc")
+ps.pipiens.field.bosc <- ps.pipiens.field.bosc %>% check_ps()
+ps.pipiens.field.bosc
+cat(paste0("read count: ", compute_read_counts(ps.pipiens.field.bosc), "\n\n"))
+
+# Culex pipiens - Camping Europe 
+cat("ps_pipiens_field_camping\n\n")
+ps.pipiens.field.camping <- ps.pipiens.field %>% subset_samples(Strain=="Field - Camping Europe")
+ps.pipiens.field.camping <- ps.pipiens.field.camping %>% check_ps()
+ps.pipiens.field.camping
+cat(paste0("read count: ", compute_read_counts(ps.pipiens.field.camping), "\n\n"))
+
+# Culex pipiens - Lavar
+cat("ps_pipiens_lavar\n\n")
+ps.pipiens.lavar <- ps.pipiens %>% subset_samples(Strain=="Laboratory - Lavar")
+ps.pipiens.lavar <- ps.pipiens.lavar %>% check_ps()
+ps.pipiens.lavar
+cat(paste0("read count: ", compute_read_counts(ps.pipiens.lavar), "\n\n"))
+```
+
+## Culex quinquefasciatus
+
+```{r}
+# Culex quinquefasciatus
+cat("ps_quinque\n\n")
+ps.quinque <- subset_samples(ps, Species=="Culex quinquefasciatus")
+ps.quinque <- check_ps(ps.quinque)
+ps.quinque
+cat(paste0("read count: ", compute_read_counts(ps.quinque), "\n\n"))
+
+# Culex quinquefasciatus - Field
+cat("ps_quinque_field\n\n")
+ps.quinque.field <- ps.quinque %>% subset_samples(Field=="Field")
+ps.quinque.field <- ps.quinque.field %>% check_ps()
+ps.quinque.field
+cat(paste0("read count: ", compute_read_counts(ps.quinque.field), "\n\n"))
+
+# Culex quinquefasciatus - lab
+cat("ps_quinque_lab\n\n")
+ps.quinque.lab <- ps.quinque %>% subset_samples(Field=="Lab ")
+ps.quinque.lab <- ps.quinque.lab %>% check_ps()
+ps.quinque.lab
+cat(paste0("read count: ", compute_read_counts(ps.quinque.lab), "\n\n"))
+```
+
+## Aedes aegypti
+```{r}
+# Aedes aegypti
+cat("ps_aedes\n\n")
+ps.aedes <- subset_samples(ps, Species=="Aedes aegypti")
+ps.aedes <- check_ps(ps.aedes)
+ps.aedes
+cat(paste0("read count: ", compute_read_counts(ps.aedes), "\n\n"))
+```
+
+
+## Blanks
+```{r}
+# Blanks
+cat("blanks\n\n")
+ps.blank <- subset_samples(ps, Strain=="Blank")
+ps.blank <- check_ps(ps.blank)
+ps.blank
+cat(paste0("read count: ", compute_read_counts(ps.blank), "\n\n"))
+```
+
+
+# Save phyloseq objects
+```{r warning=FALSE}
+setwd(path_rdata)
+saveRDS(ps, "MED_phyloseq.rds")
+
+setwd(path_tsv)
+write.table(taxo_nodes, "1C_MED_nodes_taxo.tsv", sep="\t", row.names=FALSE)
+
+setwd(path_plot)
+tiff("1C_MED_count.png", units="in", width=8, height=4, res=300)
+p_group
+dev.off()
+```
+

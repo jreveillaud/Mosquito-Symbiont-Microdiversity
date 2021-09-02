@@ -1,0 +1,76 @@
+---
+title: "Taxonomy assignment of MED nodes"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+# Taxonomy assignment
+
+## Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("Biostrings", "dada2")
+invisible(lapply(packages, require, character.only = TRUE))
+```
+
+## Import fasta without gaps from MED results
+```{r warning=FALSE}
+setwd(path_med)
+fasta <- readDNAStringSet("NODE-REPRESENTATIVES.fasta")
+fasta_df <- fasta %>% as.data.frame()
+
+# remove gaps
+fasta_df$x <- fasta_df$x %>% gsub(pattern = "-", replacement = "")
+```
+
+## Read distribution in samples
+```{r}
+setwd(path_med)
+read_distribution <- read.table("READ-DISTRIBUTION.txt", header=TRUE)
+read_distribution$samples <- factor(read_distribution$samples, levels = read_distribution$samples[order(read_distribution$represented_reads)])
+
+ggplot(read_distribution, aes(x=samples, y=represented_reads))+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(x="Sample", y="Number of read")+
+  geom_text(aes(label=represented_reads), position=position_dodge(width=0.5), size=2, hjust=-0.25, vjust=0.25, angle=90)
+```
+# Taxonomic assignment on MED nodes
+```{r}
+set.seed(102)
+taxo <- assignTaxonomy(fasta_df$x, paste0(path_bank, "/silva_nr99_v138_train_set.fa.gz"),
+                            multithread=TRUE, minBoot = 80)
+
+# add species
+taxo <- addSpecies(taxo, paste0(path_bank,"/silva_species_assignment_v138.fa"))
+```
+
+# Distribution by Genus
+```{r}
+seqtab <- taxo %>% as.data.frame()
+df <- table(seqtab$Genus) %>% as.data.frame()
+
+ggplot(df, aes(x=as.factor(Var1), y=Freq))+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(x="Genus", y="Number of MED node")
+```
+
+# Export tax table
+```{r warning=FALSE}
+setwd(path_tsv)
+write.table(taxo, "1B_MED_nodes_taxo.tsv", sep="\t")
+```

@@ -1,0 +1,742 @@
+---
+title: "Alpha diversity"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+    code_folding: "hide"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("multcomp", "openxlsx", "kableExtra")
+invisible(lapply(packages, require, character.only = TRUE))
+```
+
+# Load phyloseq object after decontam
+```{r warning=FALSE}
+setwd(path_rdata)
+ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+```
+
+# Plots
+
+## Whole 
+```{r warning=FALSE}
+
+## whole samples
+ps.whole <- subset_samples(ps.filter, Organ=="Whole")
+
+## plot
+
+### estimate alpha diversity
+
+measures <- c("Observed", "Chao1", "Shannon")
+
+p1 <- plot_richness(ps.whole, 
+                      x="Sample", 
+                      color="Strain", 
+                      measures=measures, 
+                      nrow = 1)
+
+# extract data from richness plot to custom it
+df <- p1$data
+
+# changer levels and order of species and location for plot
+levels(df$Species) <- c("AA", "CP", "CQ")
+df$Species <- factor(df$Species, levels = c("AA", "CQ", "CP"))
+
+new_location <- c("Field - Guadeloupe", 
+                  "Laboratory - Slab TC (Wolbachia -)",
+                  "Laboratory - Lavar",
+                  "Field - Bosc", 
+                  "Field - Camping Europe")
+df$Strain <- factor(df$Strain, levels = new_location)
+
+levels(df$Strain)
+# final plot
+p <- ggplot(df,aes(Species,value,colour=Strain)) +
+  facet_wrap(~ variable, drop=T,scale="free")+
+  scale_color_manual("Strain", 
+                     values=c("#00BF7D", "#5B6BF7", "#00B0F6", "#A3A500", "#F8766D"),
+                     labels = c("Field - Guadeloupe", 
+                                expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), " -)")),
+                                "Laboratory - Lavar",
+                                "Field - Bosc", 
+                                "Field - Camping Europe"))+
+  geom_boxplot(outlier.colour = NA, alpha=0.8, position = position_dodge2(width=1, preserve="single")) +
+  geom_point(size=2, position=position_dodge(width=0.7, preserve='total'))+
+  labs(x="Species", y = "Alpha Diversity Measure")+
+    theme(legend.text.align = 0)
+
+p
+```
+
+## Whole with rarefaction
+```{r}
+# Rarefaction with sample.size=100
+ps.whole2 <- ps.whole %>% rarefy_even_depth(rngseed=1, sample.size = 100)
+ps.whole2
+compute_read_counts(ps.whole2)
+
+p2 <- alpha_div3(ps.whole2, measures)
+p2
+
+
+## Rarefaction with sample.size=1000
+ps.whole3 <- ps.whole %>% rarefy_even_depth(rngseed=2, sample.size = 1000)
+ps.whole3
+compute_read_counts(ps.whole3)
+
+p3 <- alpha_div3(ps.whole3, measures)
+p3
+
+```
+
+## Ovaries
+```{r}
+ps.ovary <- subset_samples(ps.filter, Organ=="Ovary")
+sample_data(ps.ovary)$Read_depth <- sample_sums(ps.ovary)
+
+
+## change factors and order in metadata
+metadata.ps <- data.frame(sample_data(ps.ovary))
+levels(metadata.ps$Strain)
+
+levels(metadata.ps$Strain) <- c(levels(metadata.ps$Strain), "Laboratory - Lavar")
+metadata.ps$Strain[metadata.ps$Strain=="Lavar (labo)"] <- "Laboratory - Lavar"
+levels(metadata.ps$Strain)
+
+metadata.ps$Strain <- droplevels(metadata.ps$Strain)
+levels(metadata.ps$Strain)
+
+## update metadata in phyloseq object
+sample_data(ps.ovary) <- metadata.ps
+
+
+p1 <- plot_richness(ps.ovary, 
+                      x="Sample", 
+                      color="Strain", 
+                      measures=measures, 
+                      nrow = 1)
+
+# extract data from richness plot to custom it
+df <- p1$data
+
+# changer levels and order of species and location for plot
+levels(df$Species) <- c("AA", "CP", "CQ")
+
+df$Species <- factor(df$Species, levels = c("AA", "CQ", "CP"))
+
+new_location <- c("Field - Guadeloupe", 
+                  "Laboratory - Slab TC (Wolbachia -)",
+                  "Field - Bosc", 
+                  "Field - Camping Europe", 
+                  "Laboratory - Lavar")
+df$Strain <- factor(df$Strain, levels = new_location)
+
+# final plot
+p_ovary <- ggplot(df,aes(Species,value,colour=Strain)) +
+  facet_wrap(~ variable, drop=T,scale="free")+
+  scale_color_manual("Strain", 
+                     values=c("#00BF7D", "#A3A500", "#F8766D", "#00B0F6"),
+                     labels = c("Field - Guadeloupe", 
+                                "Field - Bosc", 
+                                "Field - Camping Europe", 
+                                "Laboratory - Lavar"))+
+  geom_boxplot(outlier.colour = NA, alpha=0.8, position = position_dodge2(width=1, preserve="single")) +
+  geom_point(size=2, position=position_dodge(width=0.7, preserve='total'))+
+  labs(x="Species", y = "Alpha Diversity Measure")+
+    theme(legend.text.align = 0)
+
+p_ovary
+```
+
+## Mean of estimated alpha diversity
+```{r}
+df_score <- data.frame(p$data)
+
+x <- c("Culex pipiens - Field", "Culex pipiens - Bosc", "Culex pipiens - Camping Europe", "Culex pipiens - Lavar (lab)", 
+       "Culex quinquefasciatus - Guadeloupe", "Culex quinquefasciatus - Slab TC",
+       "Aedes aegypti - Guadeloupe")
+y <- c("Observed", "Chao1", "Shannon")
+
+df <- data.frame(matrix(ncol=3, nrow=7))
+rownames(df) <- x
+colnames(df) <- y
+
+# Aedes aegypti (from Guadeloupe)
+df_score[df_score$Species=="AA" & df_score$variable=="Observed", "value"] %>% mean() -> df[7,1]
+df_score[df_score$Species=="AA" & df_score$variable=="Chao1", "value"] %>% mean() -> df[7,2]
+df_score[df_score$Species=="AA" & df_score$variable=="Shannon", "value"] %>% mean() -> df[7,3]
+
+# Culex pipiens from field
+df_score[df_score$Species=="CP" & df_score$variable=="Observed" & df_score$Field=="Field", "value"] %>% mean() -> df[1,1]
+df_score[df_score$Species=="CP" & df_score$variable=="Chao1" & df_score$Field=="Field", "value"] %>% mean() -> df[1,2]
+df_score[df_score$Species=="CP" & df_score$variable=="Shannon" & df_score$Field=="Field", "value"] %>% mean() -> df[1,3]
+
+# Culex pipiens from labo
+df_score[df_score$Species=="CP" & df_score$variable=="Observed" & df_score$Strain=="Laboratory - Lavar", "value"] %>% mean() -> df[4,1]
+df_score[df_score$Species=="CP" & df_score$variable=="Chao1" & df_score$Strain=="Laboratory - Lavar", "value"] %>% mean() -> df[4,2]
+df_score[df_score$Species=="CP" & df_score$variable=="Shannon" & df_score$Strain=="Laboratory - Lavar", "value"] %>% mean() -> df[4,3]
+
+# Culex pipiens from Bosc
+df_score[df_score$Species=="CP" & df_score$variable=="Observed" & df_score$Strain=="Field - Bosc", "value"] %>% mean() -> df[2,1]
+df_score[df_score$Species=="CP" & df_score$variable=="Chao1" & df_score$Strain=="Field - Bosc", "value"] %>% mean() -> df[2,2]
+df_score[df_score$Species=="CP" & df_score$variable=="Shannon" & df_score$Strain=="Field - Bosc", "value"] %>% mean() -> df[2,3]
+
+# Culex pipiens from Camping Europe
+df_score[df_score$Species=="CP" & df_score$variable=="Observed" & df_score$Strain=="Field - Camping Europe", "value"] %>% mean() -> df[3,1]
+df_score[df_score$Species=="CP" & df_score$variable=="Chao1" & df_score$Strain=="Field - Camping Europe", "value"] %>% mean() -> df[3,2]
+df_score[df_score$Species=="CP" & df_score$variable=="Shannon" & df_score$Strain=="Field - Camping Europe", "value"] %>% mean() -> df[3,3]
+
+# Culex quinquefasciatus from field (Guadeloupe)
+df_score[df_score$Species=="CQ" & df_score$variable=="Observed" & df_score$Field=="Field", "value"] %>% mean() -> df[5,1]
+df_score[df_score$Species=="CQ" & df_score$variable=="Chao1" & df_score$Field=="Field", "value"] %>% mean() -> df[5,2]
+df_score[df_score$Species=="CQ" & df_score$variable=="Shannon" & df_score$Field=="Field", "value"] %>% mean() -> df[5,3]
+
+# Culex quinquefasciatus from labo (Wolbachia-)
+df_score[df_score$Species=="CQ" & df_score$variable=="Observed" & df_score$Field=="Lab ", "value"] %>% mean() -> df[6,1]
+df_score[df_score$Species=="CQ" & df_score$variable=="Chao1" & df_score$Field=="Lab ", "value"] %>% mean() -> df[6,2]
+df_score[df_score$Species=="CQ" & df_score$variable=="Shannon" & df_score$Field=="Lab ", "value"] %>% mean() -> df[6,3]
+
+df %>%
+  kbl(booktable=TRUE) %>%
+  kable_paper("hover", full_width = F)
+```
+
+## Save plots
+```{r warning=FALSE}
+setwd(path_plot)
+tiff("1Eb_MED_alpha_diversity.tiff", units="in", width=8, height=5, res=300)
+p
+dev.off()
+
+png("1Eb_MED_alpha_diversity.png", units="in", width=8, height=5, res=300)
+p
+dev.off()
+```
+
+# Statistics 
+
+## Effect of depth sequencing (ANOVA / Tukey's test)
+
+### Select species
+```{r warning=FALSE}
+# Whole
+df <- p$data
+df_culex <- df[df$Species!="AA",]
+df_pipiens <- df[df$Species=="CP",]
+df_quinque <- df[df$Species=="CQ",]
+
+# Whole rarefied (100)
+df2 <- p2$data
+df2_culex <- df2[df2$Species!="AA",]
+df2_pipiens <- df2[df2$Species=="CP",]
+df2_quinque <- df2[df2$Species=="CQ",]
+
+# Whole rarefied (1000)
+df3 <- p3$data
+df3_culex <- df3[df3$Species!="AA",]
+df3_pipiens <- df3[df3$Species=="CP",]
+df3_quinque <- df3[df3$Species=="CQ",]
+```
+
+```{r eval=FALSE, include=FALSE}
+# Construire le modèle linéaire
+model  <- lm(value~ Strain, data = df_observed)
+# Créer un QQ plot des résidus
+ggpubr::ggqqplot(residuals(model))
+
+# Calculer le test de normalité de Shapiro-Wilk
+rstatix::shapiro_test(residuals(model))
+
+# homogénéité de la variance
+plot(model, 1)
+```
+
+
+
+### Effect of Species
+
+#### Observed
+```{r warning=FALSE}
+setwd(path_xlsx)
+
+# names for final array
+names <- c("Group", "Read_depth", "Group:Read_depth", "Residuals")
+names2 <- c("Group", "Read_depth", "Residuals")
+
+## Observed
+df_observed <- df[df$variable=="Observed"  & df$Field!="Lab ",]
+cat("OBSERVED\n\n")
+
+res <- lm(value~Species*Read_depth, data=df_observed) %>% anova()
+  # lm1 <- lm(value~var*effect, data=df)
+  # anova(lm1) -> result_anova
+res <- make_anova(df_observed, df_observed$Species, df_observed$value, df_observed$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+
+wb <- createWorkbook()
+addWorksheet(wb, "Alpha diversity (depth seq)")
+
+writeData(wb, "Alpha diversity (depth seq)", "Effect of species in the field samples", startCol = 1, startRow = 1)
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 6, rowNames = TRUE)
+
+#saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+
+## Chao1
+df_chao <- df[df$variable=="Chao1"  & df$Field!="Lab ",]
+cat("CHAO1\n\n")
+res <- make_anova(df_chao, df_chao$Species, df_chao$value, df_chao$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 6, rowNames = TRUE)
+
+#saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Shannon
+df_shannon <- df[df$variable=="Shannon"  & df$Field!="Lab ",]
+cat("SHANNON\n\n")
+res <- make_anova(df_shannon, df_shannon$Species, df_shannon$value, df_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 6, rowNames = TRUE)
+
+## Shannon (rarefied, 100)
+df2_shannon <- df2[df2$variable=="Shannon"  & df2$Field!="Lab ",]
+cat("SHANNON\n\n")
+res <- make_anova(df2_shannon, df2_shannon$Species, df2_shannon$value, df2_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 25, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 25, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 25, startRow = 6, rowNames = TRUE)
+
+## Shannon (rarefied, 1000)
+df3_shannon <- df3[df3$variable=="Shannon"  & df3$Field!="Lab ",]
+cat("SHANNON\n\n")
+res <- make_anova(df3_shannon, df3_shannon$Species, df3_shannon$value, df3_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 33, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 33, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 33, startRow = 6, rowNames = TRUE)
+
+saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```
+
+### Effect of tetracycline
+```{r warning=FALSE}
+setwd(path_xlsx)
+
+# Wolbachia- vs Wolbachia+
+df_culex_wolbachia <- df_culex[df_culex$Species=="CQ" & df_culex$Strain!="Laboratory - Lavar",]
+
+# Wolbachia- vs Wolbachia+ (rarefied 100)
+df2_culex_wolbachia <- df2_culex[df_culex$Species=="CQ" & df2_culex$Strain!="Laboratory - Lavar",]
+
+# Wolbachia- vs Wolbachia+ (rarefied 1000)
+df3_culex_wolbachia <- df3_culex[df_culex$Species=="CQ" & df3_culex$Strain!="Laboratory - Lavar",]
+
+## Observed
+culex_observed <- df_culex_wolbachia[df_culex_wolbachia$variable=="Observed",]
+cat("OBSERVED\n\n")
+res <- make_anova(culex_observed, culex_observed$Strain, culex_observed$value, culex_observed$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "Effect of tetracycline in the Culex quinquefasciatus samples", startCol = 1, startRow = 15)
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 17)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 19)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 20, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Chao1
+culex_chao <- df_culex_wolbachia[df_culex_wolbachia$variable=="Chao1",]
+cat("CHAO1\n\n")
+res <- make_anova(culex_chao, culex_chao$Strain, culex_chao$value, culex_chao$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 17)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 19)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 20, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+
+## Shannon
+culex_shannon <- df_culex_wolbachia[df_culex_wolbachia$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova(culex_shannon, culex_shannon$Strain, culex_shannon$value, culex_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 17)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 19)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 20, rowNames = TRUE)
+
+## Shannon (rarefied, 100)
+culex_shannon <- df2_culex_wolbachia[df2_culex_wolbachia$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova(culex_shannon, culex_shannon$Strain, culex_shannon$value, culex_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 25, startRow = 17)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 25, startRow = 19)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 25, startRow = 20, rowNames = TRUE)
+
+## Shannon (rarefied, 1000)
+culex_shannon <- df3_culex_wolbachia[df3_culex_wolbachia$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova(culex_shannon, culex_shannon$Strain, culex_shannon$value, culex_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names2
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 33, startRow = 17)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 33, startRow = 19)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 33, startRow = 20, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```
+
+### Effect of laboratory
+```{r warning=FALSE}
+setwd(path_xlsx)
+
+# Culex pipiens
+
+## Observed
+pipiens_observed <- df_pipiens[df_pipiens$variable=="Observed",]
+cat("OBSERVED\n\n")
+res <- make_anova(pipiens_observed, pipiens_observed$Strain, pipiens_observed$value, pipiens_observed$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "Effect of lab and location in the Culex pipiens samples", startCol = 1, startRow = 29)
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 31)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 33)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 34, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Chao1
+pipiens_chao <- df_pipiens[df_pipiens$variable=="Chao1",]
+cat("CHAO1\n\n")
+res <- make_anova(pipiens_chao, pipiens_chao$Strain, pipiens_chao$value, pipiens_chao$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 31)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 33)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 34, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Shannon
+pipiens_shannon <- df_pipiens[df_pipiens$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova(pipiens_shannon, pipiens_shannon$Strain, pipiens_shannon$value, pipiens_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 31)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 33)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 34, rowNames = TRUE)
+
+## Shannon (rarefied, 100)
+pipiens_shannon <- df2_pipiens[df2_pipiens$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova(pipiens_shannon, pipiens_shannon$Strain, pipiens_shannon$value, pipiens_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 25, startRow = 31)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 25, startRow = 33)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 25, startRow = 34, rowNames = TRUE)
+
+## Shannon (rarefied, 1000)
+pipiens_shannon <- df3_pipiens[df3_pipiens$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova(pipiens_shannon, pipiens_shannon$Strain, pipiens_shannon$value, pipiens_shannon$Read_depth)
+res_anova <- res %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 33, startRow = 31)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 33, startRow = 33)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 33, startRow = 34, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```
+
+
+
+
+## True analysis
+
+### Effect of species
+```{r warning=FALSE}
+setwd(path_xlsx)
+names <- c("Species", "Residuals")
+
+## Observed
+df_observed <- df[df$variable=="Observed"  & df$Field!="Lab ",]
+cat("OBSERVED\n\n")
+
+res <- make_anova_tukey(df_observed, df_observed$Species, df_observed$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+a <- make_anova(df=df_observed, var = df_observed$Strain, effect = df_observed$Species, value = df_observed$value)
+a
+
+wb <- loadWorkbook("Supplementary_Table_2.xlsx")
+addWorksheet(wb, "Alpha diversity")
+
+writeData(wb, "Alpha diversity", "Effect of species in the field samples", startCol = 1, startRow = 1)
+writeData(wb, "Alpha diversity", "OBSERVED INDEX", startCol = 1, startRow = 3)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 1, startRow = 5)
+writeData(wb, "Alpha diversity", res_anova, startCol = 1, startRow = 6, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 1, startRow = 11)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 1, startRow = 12, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+                  
+## Chao1
+df_chao <- df[df$variable=="Chao1"  & df$Field!="Lab ",]
+cat("CHAO1\n\n")
+
+res <- make_anova_tukey(df_chao, df_chao$Species, df_chao$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "CHAO1 INDEX", startCol = 9, startRow = 3)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 9, startRow = 5)
+writeData(wb, "Alpha diversity", res_anova, startCol = 9, startRow = 6, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 9, startRow = 11)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 9, startRow = 12, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Shannon
+df_shannon <- df[df$variable=="Shannon"  & df$Field!="Lab ",]
+cat("SHANNON\n\n")
+res <- make_anova_tukey(df_shannon, df_shannon$Species, df_shannon$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "SHANNON INDEX", startCol = 17, startRow = 3)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 17, startRow = 5)
+writeData(wb, "Alpha diversity", res_anova, startCol = 17, startRow = 6, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 17, startRow = 11)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 17, startRow = 12, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```
+
+### Effect of tetracycline
+```{r warning=FALSE}
+setwd(path_xlsx)
+names <- c("Strain", "Residuals")
+
+# Wolbachia- vs Wolbachia+
+df_culex_wolbachia <- df_culex[df_culex$Species=="CQ" & df_culex$Strain!="Lavar (labo)",]
+
+## Observed
+culex_observed <- df_culex_wolbachia[df_culex_wolbachia$variable=="Observed",]
+cat("OBSERVED\n\n")
+res <- make_anova_tukey(culex_observed, culex_observed$Strain, culex_observed$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "Effect of tetracycline in the Culex quinquefasciatus samples", startCol = 1, startRow = 20)
+writeData(wb, "Alpha diversity", "OBSERVED INDEX", startCol = 1, startRow = 22)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 1, startRow = 24)
+writeData(wb, "Alpha diversity", res_anova, startCol = 1, startRow = 25, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 1, startRow = 30)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 1, startRow = 31, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Chao1
+culex_chao <- df_culex_wolbachia[df_culex_wolbachia$variable=="Chao1",]
+cat("CHAO1\n\n")
+res <- make_anova_tukey(culex_chao, culex_chao$Strain, culex_chao$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "CHAO1 INDEX", startCol = 9, startRow = 22)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 9, startRow = 24)
+writeData(wb, "Alpha diversity", res_anova, startCol = 9, startRow = 25, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 9, startRow = 30)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 9, startRow = 31, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+
+## Shannon
+culex_shannon <- df_culex_wolbachia[df_culex_wolbachia$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova_tukey(culex_shannon, culex_shannon$Strain, culex_shannon$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "SHANNON INDEX", startCol = 17, startRow = 22)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 17, startRow = 24)
+writeData(wb, "Alpha diversity", res_anova, startCol = 17, startRow = 25, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 17, startRow = 30)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 17, startRow = 31, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```
+
+### Effect of lab in Culex pipiens samples
+```{r warning=FALSE}
+setwd(path_xlsx)
+# Culex pipiens
+
+## Observed
+pipiens_observed <- df_pipiens[df_pipiens$variable=="Observed",]
+cat("OBSERVED\n\n")
+res <- make_anova_tukey(pipiens_observed, pipiens_observed$Strain, pipiens_observed$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "Effect of lab (and location) in the Culex pipiens samples", startCol = 1, startRow = 37)
+writeData(wb, "Alpha diversity", "OBSERVED INDEX", startCol = 1, startRow = 39)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 1, startRow = 41)
+writeData(wb, "Alpha diversity", res_anova, startCol = 1, startRow = 42, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 1, startRow = 46)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 1, startRow = 47, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Chao1
+pipiens_chao <- df_pipiens[df_pipiens$variable=="Chao1",]
+cat("CHAO1\n\n")
+res <- make_anova_tukey(pipiens_chao, pipiens_chao$Strain, pipiens_chao$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "CHAO1 INDEX", startCol = 9, startRow = 39)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 9, startRow = 41)
+writeData(wb, "Alpha diversity", res_anova, startCol = 9, startRow = 42, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 9, startRow = 46)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 9, startRow = 47, rowNames = TRUE)
+
+##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+## Shannon
+pipiens_shannon <- df_pipiens[df_pipiens$variable=="Shannon",]
+cat("SHANNON\n\n")
+res <- make_anova_tukey(pipiens_shannon, pipiens_shannon$Strain, pipiens_shannon$value)
+res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
+res_tukey <- fill_significance(res_tukey, "Pr(>|t|)")
+res_anova <- res[[1]] %>% as.data.frame()
+res_anova <- fill_significance(res_anova,"Pr(>F)")
+rownames(res_anova) <- names
+res
+
+writeData(wb, "Alpha diversity", "SHANNON INDEX", startCol = 17, startRow = 39)
+writeData(wb, "Alpha diversity", "ANOVA:", startCol = 17, startRow = 41)
+writeData(wb, "Alpha diversity", res_anova, startCol = 17, startRow = 42, rowNames = TRUE)
+writeData(wb, "Alpha diversity", "Tukey:", startCol = 17, startRow = 46)
+writeData(wb, "Alpha diversity", res_tukey, startCol = 17, startRow = 47, rowNames = TRUE)
+
+#saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```

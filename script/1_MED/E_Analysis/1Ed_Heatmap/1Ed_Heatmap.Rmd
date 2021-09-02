@@ -1,0 +1,420 @@
+---
+title: "Heatmap"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Preparation 
+
+## Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Florentin CONSTANCIAS's script
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+## Load phyloseq objects before and after decontam
+```{r warning=FALSE}
+setwd(path_rdata)
+ps <- readRDS("MED_phyloseq.rds")
+ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+```
+
+## Change factors format for organ and species
+```{r}
+change_organ(ps.filter)
+change_species(ps.filter)
+```
+
+# Heatmap
+
+## All the MED nodes
+```{r fig.height = 10, fig.width=22}
+physeq <- ps.filter
+colnames(tax_table(physeq))[7] <- "Strain"
+
+levels(physeq@sam_data$Species) <- c("AA", "CP", "CQ")
+# levels(physeq@sam_data$Species)
+
+levels(physeq@sam_data$Strain) <- c("B", "CE", "G", "L", "W-")
+# levels(physeq@sam_data$Strain)
+
+physeq %>%
+  transform_sample_counts(function(x) x/sum(x) *100) %>%
+  phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Genus",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free")+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 0.1, 1, 10, 100), 
+                       labels = c(0,  0.01, 0.1, 1, 10, 100), 
+                      trans = scales::pseudo_log_trans(sigma=0.001), # Scaling factor for the linear part of pseudo-log transformation
+                       na.value = 'transparent') -> p1
+
+p1[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p1
+```
+
+## Wolbachia nodes
+```{r fig.height = 10, fig.width=22}
+physeq %>%
+ transform_sample_counts(function(x) x/sum(x) *100) %>% 
+ subset_taxa(Genus == "Wolbachia") %>%
+ phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free") + 
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+p2[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p2
+```
+
+## Asaia nodes
+```{r fig.height = 10, fig.width=22}
+physeq %>%
+ transform_sample_counts(function(x) x/sum(x) *100) %>% 
+ subset_taxa(Genus == "Asaia") %>%
+ phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free") + 
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p3
+p3[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p3
+```
+
+## Elizabethkingia nodes
+```{r fig.height = 10, fig.width=22}
+physeq %>%
+ transform_sample_counts(function(x) x/sum(x) *100) %>% 
+ subset_taxa(Genus == "Elizabethkingia") %>%
+ phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free") + 
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p4
+p4[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p4
+```
+
+## Legionella nodes
+```{r fig.height = 10, fig.width=22}
+physeq %>%
+ transform_sample_counts(function(x) x/sum(x) *100) %>% 
+ subset_taxa(Genus == "Legionella") %>%
+ phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free") + 
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p5
+p5[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p5
+```
+
+## Chryseobacterium nodes
+```{r fig.height = 10, fig.width=22}
+physeq %>%
+ transform_sample_counts(function(x) x/sum(x) *100) %>% 
+ subset_taxa(Genus == "Chryseobacterium") %>%
+ phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free") + 
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p6
+p6[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p6
+```
+
+## Erwinia nodes
+```{r fig.height = 10, fig.width=22}
+physeq %>%
+ transform_sample_counts(function(x) x/sum(x) *100) %>% 
+ subset_taxa(Genus == "Erwinia") %>%
+ phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free") + 
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p7
+p7[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p7
+```
+
+## Serratia nodes
+```{r fig.height = 10, fig.width=22}
+physeq %>%
+ transform_sample_counts(function(x) x/sum(x) *100) %>% 
+ subset_taxa(Genus == "Serratia") %>%
+ phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Strain", "Organ", "Field", "Species" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p + facet_grid( ~ Species + Strain + Organ + Field , scales = "free", space = "free") + 
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p8
+p8[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p8
+```
+
+
+## Check Blanks
+
+```{r warning=FALSE, fig.height = 10, fig.width=22}
+# import phyloseq object before decontam
+setwd(path_rdata)
+ps <- readRDS("MED_phyloseq.rds")
+colnames(tax_table(ps))[7] <- "Strain"
+
+# 70 nodes (all)
+ps %>%
+  transform_sample_counts(function(x) x/sum(x) *100) %>% 
+   phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Control"),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+p + facet_grid( ~ Control, scales = "free", space = "free") +
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p9
+p9[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p9
+
+
+# Pseudomonas nodes (3)
+ps %>%
+  transform_sample_counts(function(x) x/sum(x) *100) %>% 
+  subset_taxa(Genus=="Pseudomonas") %>%
+   phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Control"),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p_bis
+p_bis + facet_grid( ~ Control, scales = "free", space = "free") +
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p10
+p10[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p10
+
+
+# Enhydrobacter nodes (3)
+ps %>%
+  transform_sample_counts(function(x) x/sum(x) *100) %>% 
+  subset_taxa(Genus=="Enhydrobacter") %>%
+   phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Control"),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p_bis
+p_bis + facet_grid( ~ Control, scales = "free", space = "free") +
+    theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p11
+p11[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p11
+
+
+# Rahnella1 nodes (3)
+ps %>%
+  transform_sample_counts(function(x) x/sum(x) *100) %>% 
+  subset_taxa(Genus=="Rahnella1") %>%
+   phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Control"),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p_bis
+p_bis + facet_grid( ~ Control, scales = "free", space = "free") +
+  theme(axis.text.y = element_text(face="italic", angle = 0,  size = 12))+
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 100), 
+                       labels = c(0,  0.01, 1, 10, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p12
+p12[["labels"]][["fill"]] <- "Read abundance \n(pseudo log trans sigma=0.001)"
+p12
+```
+
+
+## Save heatmaps
+
+```{r warning=FALSE}
+setwd(path_plot)
+
+tiff("1Ed_MED_heatmap.tiff", units="in", width=28, height=16, res=300)
+p1
+dev.off()
+
+tiff("1Ed_MED_heatmap_wolbachia.tiff", units="in", width=22, height=10, res=300)
+p2
+dev.off()
+
+tiff("1Ed_MED_heatmap_asaia.tiff", units="in", width=22, height=10, res=300)
+p3
+dev.off()
+
+tiff("1Ed_MED_heatmap_elizabethkingia.tiff", units="in", width=22, height=10, res=300)
+p4
+dev.off()
+
+tiff("1Ed_MED_heatmap_legionella.tiff", units="in", width=22, height=10, res=300)
+p5
+dev.off()
+
+tiff("1Ed_MED_heatmap_chryseobacterium.tiff", units="in", width=22, height=10, res=300)
+p6
+dev.off()
+
+tiff("1Ed_MED_heatmap_erwinia.tiff", units="in", width=22, height=10, res=300)
+p7
+dev.off()
+
+tiff("1Ed_MED_heatmap_serratia.tiff", units="in", width=22, height=10, res=300)
+p8
+dev.off()
+
+tiff("1Ed_MED_heatmap_blanks_all.tiff", units="in", width=22, height=10, res=300)
+p9
+dev.off()
+
+tiff("1Ed_MED_heatmap_blanks_pseudomonas.tiff", units="in", width=22, height=10, res=300)
+p10
+dev.off()
+
+tiff("1Ed_MED_heatmap_blanks_enhydrobacter.tiff", units="in", width=22, height=10, res=300)
+p11
+dev.off()
+
+tiff("1Ed_MED_heatmap_blanks_rahnella1.tiff", units="in", width=22, height=10, res=300)
+p12
+dev.off()
+
+png("1Ed_MED_heatmap.png", units="in", width=22, height=10, res=300)
+p1
+dev.off()
+
+png("1Ed_MED_heatmap_wolbachia.png", units="in", width=22, height=10, res=300)
+p2
+dev.off()
+
+png("1Ed_MED_heatmap_asaia.png", units="in", width=22, height=10, res=300)
+p3
+dev.off()
+
+png("1Ed_MED_heatmap_elizabethkingia.png", units="in", width=22, height=10, res=300)
+p4
+dev.off()
+
+png("1Ed_MED_heatmap_legionella.png", units="in", width=22, height=10, res=300)
+p5
+dev.off()
+
+png("1Ed_MED_heatmap_chryseobacterium.png", units="in", width=22, height=10, res=300)
+p6
+dev.off()
+
+png("1Ed_MED_heatmap_erwinia.png", units="in", width=22, height=10, res=300)
+p7
+dev.off()
+
+png("1Ed_MED_heatmap_serratia.png", units="in", width=22, height=10, res=300)
+p8
+dev.off()
+
+png("1Ed_MED_heatmap_blanks_all.png", units="in", width=22, height=10, res=300)
+p9
+dev.off()
+
+png("1Ed_MED_heatmap_blanks_pseudomonas.png", units="in", width=22, height=10, res=300)
+p10
+dev.off()
+
+png("1Ed_MED_heatmap_blanks_enhydrobacter.png", units="in", width=22, height=10, res=300)
+p11
+dev.off()
+
+png("1Ed_MED_heatmap_blanks_rahnella1.png", units="in", width=22, height=10, res=300)
+p12
+dev.off()
+```

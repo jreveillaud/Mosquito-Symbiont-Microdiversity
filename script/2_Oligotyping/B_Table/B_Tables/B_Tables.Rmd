@@ -1,0 +1,85 @@
+---
+title: "Oligotyping - Tables"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Make reference tables between MED nodes and oligotypes
+
+## Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("Biostrings", "RColorBrewer")
+invisible(lapply(packages, require, character.only = TRUE))
+```
+
+## Make tables
+```{r warning=FALSE}
+# Wolbachia
+make_reference_table(path_MED=path_med,
+                     path_OLIGO=paste0(path_oligo,"/wolbachia/oligotyping_Wolbachia_sequences-c2-s1-a0.0-A0-M10"), 
+                     path_RDATA=path_rdata,
+                     path_PLOT=path_plot, 
+                     genus="wolbachia")
+
+# Asaia
+make_reference_table(path_MED=path_med,
+                     path_OLIGO=paste0(path_oligo,"/asaia/oligotyping_Asaia_sequences-c5-s1-a0.0-A0-M10"), 
+                     path_RDATA=path_rdata,
+                     path_PLOT=path_plot, 
+                     genus="asaia")
+
+# Chryseobacterium
+make_reference_table(path_MED=path_med,
+                     path_OLIGO=paste0(path_oligo,"/chryseobacterium/oligotyping_Chryseobacterium_sequences-c3-s1-a0.0-A0-M10"), 
+                     path_RDATA=path_rdata,
+                     path_PLOT=path_plot, 
+                     genus="chryseobacterium")
+
+# Elizabethkingia
+make_reference_table(path_MED=path_med,
+                     path_OLIGO=paste0(path_oligo,"/elizabethkingia/oligotyping_Elizabethkingia_sequences-c1-s1-a0.0-A0-M10"), 
+                     path_RDATA=path_rdata,
+                     path_PLOT=path_plot, 
+                     genus="elizabethkingia")
+
+# Erwinia
+make_reference_table(path_MED=path_med,
+                     path_OLIGO=paste0(path_oligo,"/erwinia/oligotyping_Erwinia_sequences-c8-s1-a0.0-A0-M10"), 
+                     path_RDATA=path_rdata,
+                     path_PLOT=path_plot, 
+                     genus="erwinia")
+
+# Legionella
+make_reference_table(path_MED=path_med,
+                     path_OLIGO=paste0(path_oligo,"/legionella/oligotyping_Legionella_sequences-c4-s1-a0.0-A0-M10"), 
+                     path_RDATA=path_rdata,
+                     path_PLOT=path_plot, 
+                     genus="legionella")
+
+# Serratia
+make_reference_table(path_MED=path_med,
+                     path_OLIGO=paste0(path_oligo,"/serratia/oligotyping_Serratia_sequences-c1-s1-a0.0-A0-M10"), 
+                     path_RDATA=path_rdata,
+                     path_PLOT=path_plot, 
+                     genus="serratia")
+```
+
+

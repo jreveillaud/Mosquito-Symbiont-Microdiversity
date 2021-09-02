@@ -1,0 +1,499 @@
+---
+title: "Run MED"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preparation
+
+## Paths and libraries setting
+
+```{r message=FALSE, warning=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("Biostrings", "seqinr")
+invisible(lapply(packages, require, character.only = TRUE))
+
+```
+
+## Create fasta file for each Genus
+
+To run oligotyping, we need to create fasta files for each Genus we want analyze. 
+
+### Wolbachia
+```{r warning=FALSE}
+# Wolbachia
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata_08_02_2021.csv",
+                             genus="Wolbachia", 
+                             path_output=paste0(path_oligo, "/wolbachia")
+                             )
+```
+
+
+### Asaia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata_08_02_2021.csv",
+                             genus="Asaia", 
+                             path_output=paste0(path_oligo, "/asaia")
+                             )
+```
+
+### Chryseobacterium
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata_08_02_2021.csv",
+                             genus="Chryseobacterium", 
+                             path_output=paste0(path_oligo, "/chryseobacterium")
+                             )
+```
+
+### Elizabethkingia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata_08_02_2021.csv",
+                             genus="Elizabethkingia", 
+                             path_output=paste0(path_oligo, "/elizabethkingia")
+                             )
+```
+
+### Erwinia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata_08_02_2021.csv",
+                             genus="Erwinia", 
+                             path_output=paste0(path_oligo, "/erwinia")
+                             )
+```
+
+### Legionella
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata_08_02_2021.csv",
+                             genus="Legionella", 
+                             path_output=paste0(path_oligo, "/legionella")
+                             )
+```
+
+### Serratia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata_08_02_2021.csv",
+                             genus="Serratia", 
+                             path_output=paste0(path_oligo, "/serratia")
+                             )
+```
+
+
+# Run Oligotyping
+
+## Wolbachia 
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_1.png")
+```
+
+### Alignment
+```{text}
+# fill gaps
+o-pad-with-gaps oligotyping_Wolbachia_sequences.fasta
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_2.png")
+```
+
+### Shannon entropy
+```{text}
+entropy-analysis oligotyping_Wolbachia_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_3.png")
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia/oligotyping_Wolbachia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY.png")
+```
+
+### Oligotyping 
+```{text}
+oligotype oligotyping_Wolbachia_sequences.fasta-PADDED-WITH-GAPS oligotyping_Wolbachia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c 2 -M 10
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_4.png")
+```
+
+7 oligotypes 
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia/oligotyping_Wolbachia_sequences-c2-s1-a0.0-A0-M10/HTML-OUTPUT/basic_reports-stackbar-stackbar.png")
+```
+
+## Asaia
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/oligotyping/asaia
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_1.png")
+```
+
+### Alignment
+```{text}
+# fill gaps
+o-pad-with-gaps oligotyping_Asaia_sequences.fasta
+```
+
+### Shannon entropy
+```{text}
+entropy-analysis oligotyping_Asaia_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_5.png")
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/asaia/oligotyping_Asaia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY.png")
+```
+
+### Oligotyping
+```{text}
+oligotype oligotyping_Asaia_sequences.fasta-PADDED-WITH-GAPS oligotyping_Asaia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c 5 -M 10
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_6.png")
+```
+
+34 oligotypes
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/asaia/oligotyping_Asaia_sequences-c5-s1-a0.0-A0-M10/HTML-OUTPUT/basic_reports-stackbar-stackbar.png")
+```
+
+
+## Chryseobacterium
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_1.png")
+```
+
+### Alignment
+```{text}
+# fill gaps
+o-pad-with-gaps oligotyping_Chryseobacterium_sequences.fasta
+```
+
+### Shannon entropy
+```{text}
+entropy-analysis oligotyping_Chryseobacterium_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_7.png")
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/chryseobacterium/oligotyping_Chryseobacterium_sequences.fasta-PADDED-WITH-GAPS-ENTROPY.png")
+```
+
+### Oligotyping
+```{text}
+oligotype oligotyping_Chryseobacterium_sequences.fasta-PADDED-WITH-GAPS oligotyping_Chryseobacterium_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c 3 -M 10
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_8.png")
+```
+
+3 oligotypes
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/chryseobacterium/oligotyping_Chryseobacterium_sequences-c3-s1-a0.0-A0-M10/HTML-OUTPUT/basic_reports-stackbar-stackbar.png")
+```
+
+
+
+## Elizabethkingia
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_1.png")
+```
+
+### Alignment
+```{text}
+# fill gaps
+o-pad-with-gaps oligotyping_Elizabethkingia_sequences.fasta
+```
+
+### Shannon entropy
+```{text}
+entropy-analysis oligotyping_Elizabethkingia_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_9.png")
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/elizabethkingia/oligotyping_Elizabethkingia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY.png")
+```
+
+### Oligotyping
+```{text}
+oligotype oligotyping_Elizabethkingia_sequences.fasta-PADDED-WITH-GAPS oligotyping_Elizabethkingia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c 1 -M 10
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_10.png")
+```
+
+2 oligotypes
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/elizabethkingia/oligotyping_Elizabethkingia_sequences-c1-s1-a0.0-A0-M10/HTML-OUTPUT/basic_reports-stackbar-stackbar.png")
+```
+
+
+## Erwinia
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_1.png")
+```
+
+### Alignment
+```{text}
+# fill gaps
+o-pad-with-gaps oligotyping_Erwinia_sequences.fasta
+```
+
+### Shannon entropy
+```{text}
+entropy-analysis oligotyping_Erwinia_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_11.png")
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/erwinia/oligotyping_Erwinia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY.png")
+```
+
+### Oligotyping
+```{text}
+oligotype oligotyping_Erwinia_sequences.fasta-PADDED-WITH-GAPS oligotyping_Erwinia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c 8 -M 10
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_12.png")
+```
+9 oligotypes
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/erwinia/oligotyping_Erwinia_sequences-c8-s1-a0.0-A0-M10/HTML-OUTPUT/basic_reports-stackbar-stackbar.png")
+```
+
+
+## Legionella
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_1.png")
+```
+
+### Alignment
+```{text}
+# fill gaps
+o-pad-with-gaps oligotyping_Legionella_sequences.fasta
+```
+
+### Shannon entropy
+```{text}
+entropy-analysis oligotyping_Legionella_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_13.png")
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/legionella/oligotyping_Legionella_sequences.fasta-PADDED-WITH-GAPS-ENTROPY.png")
+```
+
+### Oligotyping
+```{text}
+oligotype oligotyping_Legionella_sequences.fasta-PADDED-WITH-GAPS oligotyping_Legionella_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c 4 -M 10
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_14.png")
+```
+
+
+4 oligotypes
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/legionella/oligotyping_Legionella_sequences-c4-s1-a0.0-A0-M10/HTML-OUTPUT/basic_reports-stackbar-stackbar.png")
+```
+
+## Serratia
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/oligotyping/wolbachia
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_1.png")
+```
+
+### Alignment
+```{text}
+# fill gaps
+o-pad-with-gaps oligotyping_Serratia_sequences.fasta
+```
+
+### Shannon entropy
+```{text}
+entropy-analysis oligotyping_Serratia_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_15.png")
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/serratia/oligotyping_Serratia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY.png")
+```
+
+
+### Oligotyping
+```{text}
+oligotype oligotyping_Serratia_sequences.fasta-PADDED-WITH-GAPS oligotyping_Serratia_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c 1 -M 10
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/oligo_16.png")
+```
+
+2 oligotypes
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/output/oligotyping/serratia/oligotyping_Serratia_sequences-c1-s1-a0.0-A0-M10/HTML-OUTPUT/basic_reports-stackbar-stackbar.png")
+```

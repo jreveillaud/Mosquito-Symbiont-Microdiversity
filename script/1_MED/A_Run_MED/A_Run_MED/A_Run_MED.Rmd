@@ -1,0 +1,256 @@
+---
+title: "Run MED"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Chapter 2 : Run MED
+
+## Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("Biostrings", "seqinr")
+invisible(lapply(packages, require, character.only = TRUE))
+
+metadata <- read.csv(paste0(path_metadata,"/metadata_08_02_2021.csv"), sep=";")
+rownames(metadata) <- metadata$Sample
+```
+
+
+## Prepare data for MED
+
+To be run in MED workflow, data needs to be in this form (https://merenlab.org/2012/05/11/oligotyping-pipeline-explained/#preparing-the-fasta-file) : 
+
+```{text}
+>Sample-01_ReadX
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-01_ReadY
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-01_ReadZ
+ GGTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-02_ReadN
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-02_ReadM
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA
+```
+
+
+### Combine merged files 
+
+```{bash}
+PATH_MAIN="/Volumes/MY_PASSPORT/draft_final"
+PATH_OUTPUT=$PATH_MAIN/output/0_merged
+
+cd $PATH_OUTPUT
+mkdir combined_file
+
+cat *_MERGED > combined_file.fasta
+
+mv combined_file.fasta $PATH_OUTPUT/combined_file
+```
+
+
+### Load the fasta file from merge step
+```{r warning=FALSE, message=FALSE}
+# load the fasta file
+fasta_res <- load_sequence_file(path_input=path_combined, filename="combined_file.fasta")
+
+read_by_sample <- fasta_res[[1]]
+fasta_df <- fasta_res[[2]]
+
+# save (optional)
+# setwd(path_fasta_V4)
+# saveRDS(read_by_sample, "read_by_sample.rds")
+```
+
+### List and remove samples with less than 1000 reads except to NP20, NP29, NP30, NP34 et NP36
+```{r warning=FALSE}
+colnames(read_by_sample)[1] <- "Sample"
+metadata <- metadata %>% merge(read_by_sample, by="Sample")
+
+colnames(metadata)[colnames(metadata) %in% "Location"] <- "Strain"
+
+new.strain <- c("Field - Bosc", "Field - Camping Europe", "Field - Guadeloupe", 
+                "Laboratory - Lavar", "Laboratory - Slab TC (Wolbachia -)")
+
+levels(metadata$Strain) <- c(levels(metadata$Strain), new.strain)
+metadata$Strain[metadata$Strain=="Bosc"] <- "Field - Bosc"
+metadata$Strain[metadata$Strain=="Camping Europe"] <- "Field - Camping Europe"
+metadata$Strain[metadata$Strain=="Guadeloupe"] <- "Field - Guadeloupe"
+metadata$Strain[metadata$Strain=="Lavar (labo)"] <- "Laboratory - Lavar"
+metadata$Strain[metadata$Strain=="Wolbachia -"] <- "Laboratory - Slab TC (Wolbachia -)"
+metadata$Strain <- droplevels(metadata$Strain)
+levels(metadata$Strain)
+
+#metadata <- metadata[order(metadata$Run),]
+
+setwd(path_metadata)
+write.table(metadata, "metadata_nreads.csv", sep=";", row.names = FALSE)
+
+
+nmax = 1000
+bad_samples <- metadata[metadata$nread<nmax,]
+
+toremove <- c("NP20", "NP29", "NP30", "NP34", "NP36")
+bad_samples <- bad_samples[!(bad_samples$Sample %in% toremove), ]
+
+metadata <- metadata[!metadata$Sample %in% bad_samples$Sample, ]
+```
+
+### Number of read in each sample
+```{r fig.height = 12, fig.width=18}
+#guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 10, face = "italic", colour = "Black", angle = 0)))
+  
+p <- ggplot(metadata, aes(x = Sample, y = nread))+ 
+  geom_bar(position = "dodge", stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90),
+        legend.title = element_text(size = 18), 
+        legend.position="bottom",
+        legend.text=element_text(size=11), 
+        panel.spacing.y=unit(1, "lines"), 
+        panel.spacing.x=unit(0.8, "lines"),
+        panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        axis.ticks.x=element_blank(),
+        strip.text.x = element_text(size = 12)) +
+  guides(fill=guide_legend(title="Sample", label.theme = element_text(size = 10, face = "italic", 
+                                                                      colour = "Black", angle = 0)))+
+  facet_wrap(~Species+Location+Organ, scales = "free_x", ncol=4)+
+  labs(y="Sequence counts")+
+  ylim(0, 900000)+
+  geom_text(aes(label=nread), 
+            position=position_dodge(width=0.5), 
+            size=2, hjust=-0.25, vjust=0.25, angle=90)+
+  scale_fill_manual(values = col)+
+  theme_bw() +
+  ggtitle("") 
+  
+  
+p
+```
+
+### Total number of read and samples in the final file
+
+```{r}
+# Merge of fasta_df and metadata
+fasta_df$Sample_only <- sub("_.*", "", fasta_df$Sample)
+fasta_df <- droplevels(fasta_df)
+
+fasta_df_final <- fasta_df[fasta_df$Sample_only %in% metadata$Sample,]
+fasta_df_final <- droplevels(fasta_df_final)
+
+cat(paste0("Number of reads: ", nrow(fasta_df_final), "\n"))
+cat(paste0("Number of samples: ", levels(fasta_df_final$Sample_only %>% as.factor()) %>% length(), "\n"))
+```
+
+### Save fasta and list of the remove samples
+```{r warning=FALSE, message=FALSE}
+setwd(path_fasta)
+
+# objet R
+save(fasta_df_final,  file=paste0("1A_MED_sequences.RData"))
+
+# write fasta
+write.fasta(sequences=as.list(fasta_df_final$Seq), names=fasta_df_final$Sample, file.out=paste0("1A_MED_sequences.fasta"))
+
+# write list of the removed samples
+write.table(bad_samples, file=paste0("1A_MED_removed_samples.tsv"), sep="\t", row.names=FALSE, quote = FALSE)
+```
+
+## Run MED
+
+### Docker
+
+In a terminal session : 
+
+```{text}
+# move in repertory with the fasta file
+cd /Volumes/MY_PASSPORT/draft_final/output/1_fasta
+
+# run docker session
+sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:latest
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_1.png")
+```
+
+### Info from fasta
+```{text}
+# get info from fasta 
+o-get-sample-info-from-fasta 1A_MED_sequences.fasta 
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_2.png")
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_3.png")
+```
+
+### Gaps
+```{text}
+# fill gaps
+o-pad-with-gaps 1A_MED_sequences.fasta 
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_4.png")
+```
+
+### Check info from fasta after gaps
+```{text}
+# get info from fasta 
+o-get-sample-info-from-fasta 1A_MED_sequences.fasta-PADDED-WITH-GAPS
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_5.png")
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_6.png")
+```
+
+### Decompose
+```{text}
+# get info from fasta 
+decompose 1A_MED_sequences.fasta-PADDED-WITH-GAPS
+
+# exit
+exit
+```
+
+```{r echo=FALSE, out.height="150%", out.width="100%"}
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_7.png")
+knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_8.png")
+```
+
+### Move results
+```{text}
+cd /Volumes/MY_PASSPORT/draft_final/output
+mkdir 1_MED
+
+cd /Volumes/MY_PASSPORT/draft_final/output/1_fasta
+mv 1A_MED_sequences-m0.10-A0-M0-d4 ../1_MED
+```
+
+
+### Results
+
+Results of MED are stored in the 1A_MED_sequences-m0.10-A0-M0-d4 folder. 
+
+

@@ -1,0 +1,599 @@
+---
+title: "Taxonomic analysis with percent"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+    code_folding: "hide"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preparation
+
+## Paths and libraries setting
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("RColorBrewer", "ggpubr", "cowplot")
+invisible(lapply(packages, require, character.only = TRUE))
+```
+
+## Load phyloseq object after decontam
+```{r warning=FALSE}
+setwd(path_rdata)
+ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+df <- psmelt(ps.filter)
+colnames(df)[colnames(df) %in% "sample_Species"] <- "Species.x"
+```
+
+## Parameters for plot
+```{r}
+# new names for Genus
+new_names_genus <- c("Wolbachia",
+               "Asaia",
+               "Legionella",
+               "Elizabethkingia",
+               "Chryseobacterium",
+               "Erwinia",
+               "Morganella",
+               "Pseudomonas",
+               "Delftia",
+               "Methylobacterium-Methylorubrum",
+               "Serratia",
+               "Coetzeea",
+               "NA"
+)
+
+# col for Genus
+col_genus <- c("Wolbachia"="#FEB24C",
+               "Asaia"="#10E015",
+               "Legionella"="#DE3F23",
+               "Elizabethkingia"="#66A7ED",
+               "Chryseobacterium"="#F899FF",
+               "Erwinia"="#FFE352",
+               "Morganella"="#F5E4D3",
+               "Pseudomonas"="#DBF5F0",
+               "Delftia"="#C7C5B7",
+               "Methylobacterium-Methylorubrum"="blue",
+               "Serratia"="#B136F5",
+               "Coetzeea"="red",
+               "NA"="grey")
+
+# param for plot
+guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 10, face = "italic", colour = "Black", angle = 0)))
+
+# labels
+make.italic <- function(x) as.expression(lapply(x, function(y) bquote(italic(.(y)))))
+labels = c("Wolbachia"=make.italic("Wolbachia"),
+                      "Asaia"=make.italic("Asaia"),
+                      "Legionella"=make.italic("Legionella"),
+                      "Elizabethkingia"=make.italic("Elizabethkingia"),
+                      "Chryseobacterium"=make.italic("Chryseobacterium"),
+                      "Erwinia"=make.italic("Erwinia"),
+                      "Morganella"=make.italic("Morganella"),
+                      "Pseudomonas"=make.italic("Pseudomonas"),
+                      "Delftia"=make.italic("Delftia"),
+                      "Methylobacterium-Methylorubrum"=make.italic("Methylobacterium-Methylorubrum"),
+                      "Serratia"=make.italic("Serratia"),
+                      "Coetzeea"=make.italic("Coetzeea"),
+                      "NA"
+)
+```
+
+# Culex pipiens
+
+## Whole
+
+```{r}
+df_plot <- df[df$Species.x=="Culex pipiens" & df$Organ=="Whole",] %>%
+  group_by(Species.x, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Species.x,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+pipiens1 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="All strains", x="Genus", y="Relative abundance (%)", subtitle= "Culex pipiens - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+pipiens1
+```
+
+
+## Whole - Bosc
+
+```{r}
+df_plot <- df[df$Species.x=="Culex pipiens" & df$Organ=="Whole" & df$Strain=="Field - Bosc",] %>%
+  group_by(Strain, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Strain,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+pipiens2 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="Field - Bosc", x="Genus", y="Relative abundance (%)", subtitle= "Culex pipiens - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+pipiens2
+```
+
+## Whole - Camping Europe
+
+```{r}
+df_plot <- df[df$Species.x=="Culex pipiens" & df$Organ=="Whole" & df$Strain=="Field - Camping Europe",] %>%
+  group_by(Strain, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Strain,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+pipiens3 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="Field - Camping Europe", x="Genus", y="Relative abundance (%)", subtitle= "Culex pipiens - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+pipiens3
+```
+
+## Whole - Lavar
+
+```{r}
+df_plot <- df[df$Species.x=="Culex pipiens" & df$Organ=="Whole" & df$Strain=="Laboratory - Lavar",] %>%
+  group_by(Strain, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Strain,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+pipiens4 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="Laboratory - Lavar", x="Genus", y="Relative abundance (%)", subtitle= "Culex pipiens - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+pipiens4
+```
+
+## Ovary
+```{r}
+df_plot <- df[df$Species.x=="Culex pipiens" & df$Organ=="Ovary",] %>%
+  group_by(Species.x, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Species.x,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+pipiens5 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="All strains", x="Genus", y="Relative abundance (%)", subtitle= "Culex pipiens - Ovary")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+pipiens5
+```
+
+## Groups
+
+```{r}
+# Plot
+p_pipiens <- plot_grid(pipiens1+ theme(legend.position="none"), 
+          pipiens2+ theme(legend.position="none"), 
+          pipiens3+ theme(legend.position="none"), 
+          pipiens4+ theme(legend.position="none"), 
+          pipiens5+ theme(legend.position="none", plot.margin = unit(c(0.17,-1,1.2,0), "cm")),
+          ncol = 5, 
+          nrow = 2)
+```
+
+
+# Culex quinquefasciatus
+
+## Whole 
+```{r}
+df_plot <- df[df$Species.x=="Culex quinquefasciatus" & df$Organ=="Whole",] %>%
+  group_by(Species.x, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Species.x,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+quinque1 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="All strains", x="Genus", y="Relative abundance (%)", subtitle= "Culex quinquefasciatus - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+quinque1
+```
+
+## Whole - Guadeloupe
+
+```{r}
+df_plot <- df[df$Species.x=="Culex quinquefasciatus" & df$Organ=="Whole" & df$Strain=="Field - Guadeloupe",] %>%
+  group_by(Strain, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Strain,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+quinque2 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="Field - Guadeloupe", x="Genus", y="Relative abundance (%)", subtitle= "Culex quinquefasciatus - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+quinque2
+```
+
+## Whole - Slab TC
+
+```{r}
+df_plot <- df[df$Species.x=="Culex quinquefasciatus" & df$Organ=="Whole" & df$Strain=="Laboratory - Slab TC (Wolbachia -)",] %>%
+  group_by(Strain, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Strain,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+quinque3 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="Laboratory - Slab TC (Wolbachia -)", x="Genus", y="Relative abundance (%)", subtitle= "Culex quinquefasciatus - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+quinque3
+```
+
+## Ovary
+
+```{r}
+df_plot <- df[df$Species.x=="Culex quinquefasciatus" & df$Organ=="Ovary",] %>%
+  group_by(Species.x, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Species.x,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+quinque4 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="All strains", x="Genus", y="Relative abundance (%)", subtitle= "Culex quinquefasciatus - Ovary")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+quinque4
+```
+
+## Groups
+
+```{r}
+# Plot
+p_quinque <- plot_grid(quinque1+ theme(legend.position="none"), 
+          quinque2+ theme(legend.position="none"), 
+          quinque3+ theme(legend.position="none"), 
+          quinque4+ theme(legend.position="none", plot.margin = unit(c(0.17,0,1.2,0), "cm")), 
+          plot.new(),
+          ncol = 5, 
+          nrow = 2)
+
+p_quinque
+```
+
+# Aedes aegyti
+
+## Whole 
+```{r}
+df_plot <- df[df$Species.x=="Aedes aegypti" & df$Organ=="Whole",] %>%
+  group_by(Species.x, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Species.x,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+aedes1 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="All strains", x="Genus", y="Relative abundance (%)", subtitle= "Aedes aegytpi - Whole")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+aedes1
+```
+
+## Ovary
+```{r}
+df_plot <- df[df$Species.x=="Aedes aegypti" & df$Organ=="Ovary",] %>%
+  group_by(Species.x, Genus) %>%
+  summarise(read_sum = sum(Abundance))
+
+df_plot$percent <- (df_plot$read_sum/sum(df_plot$read_sum))*100
+df_plot <- df_plot[with(df_plot, order(Species.x,-percent)),]
+
+df_plot$Genus <- factor(df_plot$Genus, levels = unique(df_plot$Genus))
+df_plot$Genus <- factor(df_plot$Genus, levels = new_names_genus)
+
+df_plot <- droplevels(df_plot)
+
+aedes2 <- ggplot(df_plot, aes(x=Genus, y=percent, fill = Genus))+
+  geom_bar(position = "dodge", stat = "identity")+
+  scale_fill_manual(values = col_genus)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust=1, hjust=1, size=12))+
+  ggtitle("") +
+  guide_italics+
+  theme(legend.title = element_text(size = 18), legend.position="bottom")+
+  theme(panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        plot.title=element_text(size=10),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label=percent %>% round(1)),position=position_dodge(width=0.9), vjust=-0.25, size=4)+
+  scale_y_continuous(breaks=seq(0,105, by=10))+
+  scale_x_discrete(labels = labels)+
+  ylim(0,100)+
+  labs(title="All strains", x="Genus", y="Relative abundance (%)", subtitle= "Aedes aegytpi - Ovary")+
+  theme(plot.tag.position = "topright",
+        plot.subtitle=element_text(size=10, face="italic", color="black"))
+aedes2
+```
+
+## Groups
+
+```{r}
+# Plot
+p_aedes <- plot_grid(aedes1+ theme(legend.position="none"), 
+                     aedes2+ theme(legend.position="none", plot.margin = unit(c(0.17,0,1.2,0), "cm")), 
+                     plot.new(),
+                     plot.new(),
+                     plot.new(),
+                     ncol = 5, 
+                     nrow = 2)
+```
+
+# Plot with all
+
+## All
+
+```{r fig.height = 20, fig.width=18, warning=FALSE, message=FALSE}
+p_global <- plot_grid(pipiens1+ theme(legend.position="none"), 
+                     pipiens2+ theme(legend.position="none"), 
+                     pipiens3+ theme(legend.position="none"), 
+                     pipiens4+ theme(legend.position="none"), 
+                     pipiens5+ theme(legend.position="none", plot.margin = unit(c(0.17,1,1.2,0), "cm")),
+                     quinque1+ theme(legend.position="none"), 
+                     quinque2+ theme(legend.position="none"), 
+                     quinque3+ theme(legend.position="none"), 
+                     quinque4+ theme(legend.position="none", plot.margin = unit(c(0.17,1,1.2,0), "cm")), 
+                     plot.new(),
+                     aedes1+ theme(legend.position="none"), 
+                     #aedes2+ theme(legend.position="none", plot.margin = unit(c(0.17,1,1.2,0), "cm")), 
+                     plot.new(),
+                     plot.new(),
+                     plot.new(),
+                     nrow=3, 
+                     ncol=5
+)
+
+# +
+#   draw_plot_label(c("A", "B", "C"), c(0, 0, 0), c(1, 2/3, 1/3), size = 15)
+
+p_global
+```
+
+## Saving it
+
+```{r warning=FALSE}
+setwd(path_plot)
+tiff("1Ef_MED_taxonomic_percent_V2.tiff", units="in", width=25, height=20, res=300)
+p_global
+dev.off()
+
+tiff("1Ef_MED_taxonomic_percent_V2.png", units="in", width=25, height=20, res=300)
+p_global
+dev.off()
+```

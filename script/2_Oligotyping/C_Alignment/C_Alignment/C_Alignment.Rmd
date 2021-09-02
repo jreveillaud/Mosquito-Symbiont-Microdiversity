@@ -1,0 +1,75 @@
+---
+title: "Alignment"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load packages, paths, functions
+```{r message=FALSE, warning=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("Biostrings", "msa")
+invisible(lapply(packages, require, character.only = TRUE))
+```
+
+# Make alignment
+```{r warning=FALSE}
+# Wolbachia
+make_alignment(path_input=path_tsv, 
+               path_output=path_plot, 
+               genus="wolbachia", 
+               oligo_zoom=c(190, 280))
+
+# Asaia
+make_alignment(path_input=path_tsv, 
+               path_output=path_plot, 
+               genus="asaia", 
+               oligo_zoom=c(200, 270))
+
+# Chryseobacterium
+make_alignment(path_input=path_tsv, 
+               path_output=path_plot, 
+               genus="chryseobacterium",
+               oligo_zoom=c(85,385))
+
+# Elizabethkingia
+make_alignment(path_input=path_tsv, 
+               path_output=path_plot, 
+               genus="elizabethkingia",
+               oligo_zoom=c(250,270))
+
+# Erwinia
+make_alignment(path_input=path_tsv, 
+               path_output=path_plot, 
+               genus="erwinia",
+               oligo_zoom=c(90,120))
+
+# Legionella
+make_alignment(path_input=path_tsv, 
+               path_output=path_plot, 
+               genus="legionella", 
+               oligo_zoom=c(60,270))
+
+# Serratia
+make_alignment(path_input=path_tsv, 
+               path_output=path_plot, 
+               genus="serratia", 
+               oligo_zoom=c(90,120))
+```
+
+

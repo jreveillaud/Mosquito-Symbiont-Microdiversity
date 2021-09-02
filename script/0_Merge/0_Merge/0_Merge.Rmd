@@ -1,0 +1,74 @@
+---
+title: "Merge raw data"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Chapter 1 : Merge raw data 
+
+## Paths and libraries setting
+```{r, warning=FALSE, message=FALSE}
+
+# libraries
+require(tidyverse)
+require(kableExtra)
+
+# paths
+path_main <- "/Volumes/MY_PASSPORT/draft_final"
+path_output <- paste0(path_main, "/output/0_useful_files")
+```
+
+
+## Generate R1 and R2 sample files
+
+```{r engine='bash', comment=''}
+# print script to generate samples files for R1 and R2
+cat /Volumes/MY_PASSPORT/draft_final/script/0_Merge/generate_R1_R2_files.sh
+```
+
+```{r engine='bash'}
+# run
+bash /Volumes/MY_PASSPORT/draft_final/script/0_Merge/generate_R1_R2_files.sh
+```
+
+
+## Generate a main sample file
+
+```{r engine='bash', warning=FALSE, message=FALSE}
+# create a sample file txt
+Rscript /Volumes/MY_PASSPORT/draft_final/script/0_Merge/create_sample_file.R
+```
+
+## Print generated sample file
+```{r warning=FALSE, message=FALSE}
+setwd(path_output)
+df <- read.table("0_sample_file.txt", header = TRUE)
+
+df %>%
+  kbl(booktable=TRUE) %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+## Merge samples
+
+```{r engine='bash'}
+bash /Volumes/MY_PASSPORT/draft_final/script/0_Merge/make_merge.sh
+```
+
+```{r engine='r'}
+setwd(paste0(path_main, "/0_merged"))
+list.files() %>% cat(sep="\n")
+```
+

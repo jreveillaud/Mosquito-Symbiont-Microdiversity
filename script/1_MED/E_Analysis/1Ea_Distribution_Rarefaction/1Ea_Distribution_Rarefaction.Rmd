@@ -1,0 +1,140 @@
+---
+title: "Distribution and rarefaction curves"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Distribution
+
+## Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../../source/main_packages.R")
+source("../../../source/paths.R")
+source("../../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("cowplot")
+invisible(lapply(packages, require, character.only = TRUE))
+
+# Load supplementary functions
+scripts <- c("graphical_methods.R",
+             "tree_methods.R",
+             "plot_merged_trees.R",
+             "specificity_methods.R",
+             "ternary_plot.R",
+             "richness.R",
+             "edgePCA.R",
+             "copy_number_correction.R",
+             "import_frogs.R",
+             "prevalence.R",
+             "compute_niche.R",
+             "NCM_fit.R")
+urls <-
+  paste0("https://raw.githubusercontent.com/mahendra-mariadassou/phyloseq-extended/master/R/",
+         scripts)
+
+for (url in urls) {
+  source(url)
+}
+```
+
+## Load phyloseq object after decontam
+```{r warning=FALSE}
+setwd(path_rdata)
+ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+```
+
+## Distribution plot
+```{r}
+p0 <- distribution(ps.filter)
+p0
+```
+
+
+# Rarefaction
+
+## Make rarefaction
+```{r warning=FALSE, fig.height=8, fig.width=6}
+make.italic <- function(x) as.expression(lapply(x, function(y) bquote(italic(.(y)))))
+
+levels(ps.filter@sam_data$Species)= c("Aedes aegypti"=make.italic("Aedes aegypti"),
+               "Culex pipiens"=make.italic("Culex pipiens"),
+               "Culex quinquefasciatus"=make.italic("Culex quinquefasciatus"))
+
+# levels(ps.filter@sam_data$Location) <- c("Bosc", "Camping~Europe", "Guadeloupe", "Lavar~(lab)", expression(paste(italic("Wolbachia"),"- (SlabTC)")))
+
+levels(ps.filter@sam_data$Strain) <- c("Field - Bosc", 
+                                  "Field~-~Camping~Europe", 
+                                  "Field~-~Guadeloupe", 
+                                  "Laboratory~-~Lavar", 
+                                  expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), "-)")))
+
+# without zoom
+p1 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Whole"))
+p2 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Ovary"))
+
+# with zoom
+p3 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Whole"))+
+  coord_cartesian(xlim=c(0,1000))
+p4 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Ovary"))+
+  coord_cartesian(xlim=c(0,1000))
+
+# panels without zoom
+p_group <- plot_grid(p1+theme(legend.position="none"), 
+          p2+theme(legend.position="none"), 
+          nrow=2, 
+          ncol=1)+
+    draw_plot_label(c("A", "B"), c(0, 0), c(1, 0.5), size = 15)
+
+p_group
+
+# panels with zoom
+p_group2 <- plot_grid(p3+theme(legend.position="none"), 
+          p4+theme(legend.position="none"), 
+          nrow=2, 
+          ncol=1)+
+    draw_plot_label(c("A", "B"), c(0, 0), c(1, 0.5), size = 15)
+
+p_group2
+```
+
+## Save plots
+```{r warning=FALSE, message=FALSE}
+setwd(path_plot)
+tiff("1Ea-MED_ditribution.tiff", units="in", width=10, height=5, res=300)
+p0
+dev.off()
+
+png("1Ea-MED_ditribution.png", units="in", width=10, height=5, res=300)
+p0
+dev.off()
+
+tiff("1Ea-MED_rarefaction.tiff", units="in", width=8, height=10, res=300)
+p_group
+dev.off()
+
+tiff("1Ea-MED_rarefaction_zoom.tiff", units="in", width=8, height=10, res=300)
+p_group2
+dev.off()
+
+png("1Ea-MED_rarefaction.png", units="in", width=8, height=10, res=300)
+p_group
+dev.off()
+
+png("1Ea-MED_rarefaction_zoom.png", units="in", width=8, height=10, res=300)
+p_group2
+dev.off()
+```
