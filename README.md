@@ -8,7 +8,7 @@ Before everything else, you need to download the data and edit the paths file (a
 The raw illumina paired-end reads are stored in ENA and accesible with the accession number XXX. 
 
 ## Complete reproductible workflow
-In the script folder, there is multiple folders numbered from 0 to 2 and corresponding to a step of the global analysis. Each folder includes multiple sub-folders referred to as a letter from A to D and corresponding to a sub-step of the step. 
+In the script folder, there are multiple folders numbered from 0 to 2 and corresponding to a step of the global analysis. Each folder includes multiple sub-folders referred to as a letter from A to D and corresponding to a sub-step of the step. 
 
 To do the complete workflow, you need to run the scripts by number and letter order.
 
