@@ -1,7 +1,7 @@
 This project describes the bioinformatic reproductible workflow associated to the paper " The mosquito microbiome includes habitat-specific but rare symbionts". 
 
 ## Downloading the fastq files
-Before everything else, you need to download the data and edit the paths file (available in /script/source/paths.R).
+Before everything else, you need to download the data and edit the paths file (available in /script/source/).
 The raw illumina paired-end reads are stored in ENA and accesible with the accession number XXX. 
 
 ## Complete reproductible workflow
