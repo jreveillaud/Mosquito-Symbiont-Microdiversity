@@ -15,9 +15,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Chapter 2 : Run MED
-
-## Paths and libraries setting
+# Paths and libraries setting
 
 ```{r, warning=FALSE, message=FALSE}
 # Load main packages, paths and custom functions
@@ -34,7 +32,7 @@ rownames(metadata) <- metadata$Sample
 ```
 
 
-## Prepare data for MED
+# Prepare data for MED
 
 To be run in MED workflow, data needs to be in this form (https://merenlab.org/2012/05/11/oligotyping-pipeline-explained/#preparing-the-fasta-file) : 
 
@@ -52,35 +50,34 @@ To be run in MED workflow, data needs to be in this form (https://merenlab.org/2
 ```
 
 
-### Combine merged files 
+## Combine merged files 
 
 ```{bash}
-PATH_MAIN="/Volumes/MY_PASSPORT/draft_final"
-PATH_OUTPUT=$PATH_MAIN/output/0_merged
+# load paths
+source /Volumes/MY_PASSPORT/draft_final/script/source/paths_for_bash.sh
 
-cd $PATH_OUTPUT
+<!-- PATH_MAIN="/Volumes/MY_PASSPORT/draft_final" -->
+<!-- PATH_OUTPUT=$PATH_MAIN/output/0_merged -->
+
+cd $PATH_MERGED
 mkdir combined_file
 
 cat *_MERGED > combined_file.fasta
 
-mv combined_file.fasta $PATH_OUTPUT/combined_file
+mv combined_file.fasta $PATH_MERGED/combined_file
 ```
 
 
-### Load the fasta file from merge step
+## Load the fasta file from merge step
 ```{r warning=FALSE, message=FALSE}
 # load the fasta file
 fasta_res <- load_sequence_file(path_input=path_combined, filename="combined_file.fasta")
 
 read_by_sample <- fasta_res[[1]]
 fasta_df <- fasta_res[[2]]
-
-# save (optional)
-# setwd(path_fasta_V4)
-# saveRDS(read_by_sample, "read_by_sample.rds")
 ```
 
-### List and remove samples with less than 1000 reads except to NP20, NP29, NP30, NP34 et NP36
+## List and remove samples with less than 1000 reads except to NP20, NP29, NP30, NP34 et NP36
 ```{r warning=FALSE}
 colnames(read_by_sample)[1] <- "Sample"
 metadata <- metadata %>% merge(read_by_sample, by="Sample")
@@ -114,7 +111,7 @@ bad_samples <- bad_samples[!(bad_samples$Sample %in% toremove), ]
 metadata <- metadata[!metadata$Sample %in% bad_samples$Sample, ]
 ```
 
-### Number of read in each sample
+## Number of read in each sample
 ```{r fig.height = 12, fig.width=18}
 #guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 10, face = "italic", colour = "Black", angle = 0)))
   
@@ -147,7 +144,7 @@ p <- ggplot(metadata, aes(x = Sample, y = nread))+
 p
 ```
 
-### Total number of read and samples in the final file
+## Total number of read and samples in the final file
 
 ```{r}
 # Merge of fasta_df and metadata
@@ -161,7 +158,7 @@ cat(paste0("Number of reads: ", nrow(fasta_df_final), "\n"))
 cat(paste0("Number of samples: ", levels(fasta_df_final$Sample_only %>% as.factor()) %>% length(), "\n"))
 ```
 
-### Save fasta and list of the remove samples
+## Save fasta and list of the remove samples
 ```{r warning=FALSE, message=FALSE}
 setwd(path_fasta)
 
@@ -175,9 +172,9 @@ write.fasta(sequences=as.list(fasta_df_final$Seq), names=fasta_df_final$Sample, 
 write.table(bad_samples, file=paste0("1A_MED_removed_samples.tsv"), sep="\t", row.names=FALSE, quote = FALSE)
 ```
 
-## Run MED
+# Run MED
 
-### Docker
+## Docker
 
 In a terminal session : 
 
@@ -193,7 +190,7 @@ sudo docker run --rm -it -v `pwd`:`pwd` -w `pwd` -p 8080:8080 meren/oligotyping:
 knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_1.png")
 ```
 
-### Info from fasta
+## Info from fasta
 ```{text}
 # get info from fasta 
 o-get-sample-info-from-fasta 1A_MED_sequences.fasta 
@@ -204,7 +201,7 @@ knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_2.png"
 knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_3.png")
 ```
 
-### Gaps
+## Gaps
 ```{text}
 # fill gaps
 o-pad-with-gaps 1A_MED_sequences.fasta 
@@ -214,7 +211,7 @@ o-pad-with-gaps 1A_MED_sequences.fasta
 knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_4.png")
 ```
 
-### Check info from fasta after gaps
+## Check info from fasta after gaps
 ```{text}
 # get info from fasta 
 o-get-sample-info-from-fasta 1A_MED_sequences.fasta-PADDED-WITH-GAPS
@@ -225,7 +222,7 @@ knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_5.png"
 knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_6.png")
 ```
 
-### Decompose
+## Decompose
 ```{text}
 # get info from fasta 
 decompose 1A_MED_sequences.fasta-PADDED-WITH-GAPS
@@ -239,7 +236,7 @@ knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_7.png"
 knitr::include_graphics("/Volumes/MY_PASSPORT/draft_final/screenshots/med_8.png")
 ```
 
-### Move results
+## Move results
 ```{text}
 cd /Volumes/MY_PASSPORT/draft_final/output
 mkdir 1_MED
@@ -249,7 +246,7 @@ mv 1A_MED_sequences-m0.10-A0-M0-d4 ../1_MED
 ```
 
 
-### Results
+## Results
 
 Results of MED are stored in the 1A_MED_sequences-m0.10-A0-M0-d4 folder. 
 
