@@ -10,5 +10,6 @@ In the main script folder, there are multiple sub-folders numbered from 0 to 2 (
 To do the complete workflow, you thus need to run the scripts by number and letter order (0-A, 0-B,....1-A,1-B, etc).
 
 Folder 0_ corresponding to Merge step, folder 1_ to MED analysis and folder 2_ to oligotyping analysis.
+
 Folder "source" including all the main paths and functions used in workflow. 
 
