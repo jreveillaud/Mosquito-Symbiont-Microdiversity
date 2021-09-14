@@ -1,0 +1,107 @@
+---
+title: "Wolbachia screening"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# Load main packages, paths and custom functions
+source("../../source/main_packages.R")
+source("../../source/paths.R")
+source("../../source/functions.R")
+
+# Load supplementary packages
+packages <- c("Biostrings", "seqinr", "kableExtra")
+invisible(lapply(packages, require, character.only = TRUE))
+```
+
+# Import fasta from oligotyping results
+
+```{r warning=FALSE}
+setwd(paste0(path_oligo,"/wolbachia/oligotyping_Wolbachia_sequences-c2-s1-a0.0-A0-M10"))
+
+fasta_oligo <- readDNAStringSet("OLIGO-REPRESENTATIVES.fasta")
+fasta_oligo <- read.fasta("OLIGO-REPRESENTATIVES.fasta")
+```
+
+# Extract fragment from first Wolbachia oligotype (test)
+```{r}
+myfrag <- getFrag(fasta_oligo[[1]], begin = 250, end = 279)
+```
+
+# Extract fragment from each Wolbachia oligotype
+
+```{r}
+
+# loop to extract each fragment from Wolbachia oligotypes
+names <- c()
+fragments <- c()
+for(i in 1:length(fasta_oligo)){
+  
+  # AT, GT, AG, TT, GG, AC
+  if(i!=5){
+    names <- c(names, names(fasta_oligo)[i])
+    myfrag <- getFrag(fasta_oligo[[i]], begin = 250, end = 279)
+    myseq <- getSequence(myfrag) %>% paste(collapse = "") %>% toupper()
+    fragments <- c(fragments, myseq)
+  }
+  
+  # CC because deletion
+  if(i==5){
+    names <- c(names, names(fasta_oligo)[i])
+    myfrag <- getFrag(fasta_oligo[[i]], begin = 180, end = 209)
+    myseq <- getSequence(myfrag) %>% paste(collapse = "") %>% toupper()
+    fragments <- c(fragments, myseq)
+  }
+}
+
+# save fragments in a dataframe
+df <- data.frame(names, fragments)
+
+# print it
+df %>%
+  kbl() %>%
+  kable_paper("hover", full_width = F)
+```
+
+# Save the fragments table
+```{r}
+setwd(path_tsv)
+write.table(df, "2E_MATCH_fragments.tsv", sep="\t", quote = FALSE, row.names = FALSE)
+```
+
+# Do the screening
+
+```{bash}
+source /Volumes/MY_PASSPORT/draft_final/script/source/paths_for_bash.sh
+
+cd $PATH_MAIN/output/tsv
+
+names=$(cut -f1  2E_MATCH_fragments.tsv | sed 1d)
+
+i=0
+for frag in $(cut -f2  2E_MATCH_fragments.tsv | sed 1d)
+  do
+    echo $frag
+    anvi-script-get-primer-matches --samples-txt samples_wolbachia_screening.txt  \
+      --primer-sequences $frag \
+      --min-remainder-length 10 \
+      --output-dir $PATH_MAIN/output/screening/${names[i]}
+    i=i+1
+  done
+```
+
+
