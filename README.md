@@ -27,7 +27,9 @@ By the way, the folder "source" including all functions and the main R packages 
 
 ## Needed ressources
 The workflow uses mainly two softwares, oligotyping version 2.1 and anvi'o version 7.1, using a docker container and a conda environment respectively. 
+
 To install oligotyping-2.1 in a docker container, you can follow this great tutorial : https://merenlab.org/2014/09/02/virtualbox/
+
 To install anvi'o-7.1, you can follow this one : https://merenlab.org/2016/06/26/installation-v2/
 
 
