@@ -1,8 +1,8 @@
 This project describes the bioinformatic reproductible workflow associated to the paper "Mosquito symbiont microdiversity as revealed by oligotyping". 
 
 ## Downloading the fastq files
-Before everything else, you need to download the data. 
-The raw illumina paired-end reads of 136 samples are stored in ENA and accesible with the accession number PRJEB43079. 
+Before everything else, you need to download the data and place it in a Data folder in the main directory. 
+The raw illumina paired-end reads of 136 samples are stored in ENA and accesible with the accession number PRJEB43079.
 
 ## Complete reproductible workflow
 
@@ -25,12 +25,24 @@ So, to do the complete workflow, you thus need to run the scripts by number and 
 
 By the way, the folder "source" including all functions and the main R packages used in the workflow. 
 
+## Metadata and additionnal files
+
+You also will find a metadata folder that contains the Supplementary Table 1 avaible in the MS and a additional_files folder that contains files used for Beta diversity and Wolbachia screening. 
+
+
 ## Needed ressources
 The workflow uses mainly two softwares, oligotyping version 2.1 and anvi'o version 7.1, using a docker container and a conda environment respectively. 
 
 To install oligotyping-2.1 in a docker container, you can follow this great tutorial : https://merenlab.org/2014/09/02/virtualbox/
 
 To install anvi'o-7.1, you can follow this one : https://merenlab.org/2016/06/26/installation-v2/
+
+
+You also need  download the silva database version 138 and put them into a Bank folder in the main directory, especially :
+- silva_nr99_v138_train_set.fa.gz
+- silva_species_assignment_v138.fa files 
+
+Available just here: https://zenodo.org/record/3986799#.Ya3eHy3pN71. 
 
 
 
