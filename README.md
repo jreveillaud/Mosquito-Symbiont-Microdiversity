@@ -37,7 +37,7 @@ To install oligotyping-2.1 in a docker container, you can follow this great tuto
 
 To install anvi'o-7.1, you can follow this one : https://merenlab.org/2016/06/26/installation-v2/
 
-You also need  download the silva database version 138, especially the silva_nr99_v138_train_set.fa.gz and silva_species_assignment_v138.fa files available just here : https://zenodo.org/record/3986799#.Ya3eHy3pN71 and put them into a Bank folder in the main directory.
+You also need  download the silva database version 138, especially the silva_nr99_v138_train_set.fa.gz and silva_species_assignment_v138.fa files (available just here: https://zenodo.org/record/3986799#.Ya3eHy3pN71) and put them into a Bank folder in the main directory.
 
 
 
