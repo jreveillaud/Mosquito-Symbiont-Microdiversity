@@ -1,0 +1,107 @@
+---
+title: "Merge raw data"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+    code_folding: "show"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Paths and libraries setting
+```{r, warning=FALSE, message=FALSE}
+# load packages
+require(tidyverse)
+require(kableExtra)
+
+# create output folders if needed
+if (!dir.exists("../../output")) {dir.create("../../output")}
+if (!dir.exists("../../output/0_merge")) {dir.create("../../output/0_merge")}
+if (!dir.exists("../../output/0_merge/0A_prep_files")) {dir.create("../../output/0_merge/0A_prep_files")}
+if (!dir.exists("../../output/0_merge/0B_ini")) {dir.create("../../output/0_merge/0B_ini")}
+if (!dir.exists("../../output/0_merge/0C_merged")) {dir.create("../../output/0_merge/0C_merged")}
+if (!dir.exists("../../output/0_merge/0D_combined")) {dir.create("../../output/0_merge/0D_combined")}
+```
+
+
+# Generate R1 and R2 sample files from raw fastq.gz
+
+```{r engine='bash', comment=''}
+# export list of R1 and R2 sequences
+ls ../../data | grep "R1" > ../../output/0_merge/0A_prep_files/0A_R1.txt
+ls ../../data | grep "R2" > ../../output/0_merge/0A_prep_files/0A_R2.txt
+```
+
+
+# Generate a main sample file that will be used by the merge function
+
+```{r warning=FALSE, message=FALSE}
+## import R1 and R2 files
+R1 <- read.table("../../output/0_merge/0A_prep_files/0A_R1.txt")
+R2 <- read.table("../../output/0_merge/0A_prep_files/0A_R2.txt")
+
+## create file
+df <- data.frame(R1, R2)
+colnames(df) <- c("r1", "r2")
+df$sample <- sub("\\_.*", "", df$r1)
+df <- df %>% select(c(sample, r1, r2))
+df$r1 <- paste0("../../data/", df$r1)
+df$r2 <- paste0("../../data/", df$r2)
+
+## print df
+df %>%
+  kbl(booktable=TRUE) %>%
+  kable_paper("hover", full_width = F)
+
+## save file
+write.table(df,'../../output/0_merge/0A_prep_files/0A_sample_file.txt', sep="\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+# Merge samples
+
+```{r engine='bash', attr.output='style="max-height: 300px;"'}
+# load conda environment including illumina-utils
+source ~/opt/miniconda3/etc/profile.d/conda.sh
+conda activate illumina-utils
+
+# generate config files for merge
+iu-gen-configs ../../output/0_merge/0A_prep_files/0A_sample_file.txt -o ../../output/0_merge/0B_ini
+
+# merge
+for ini in ../../output/0_merge/0B_ini/*.ini
+do
+iu-merge-pairs --min-overlap-size 30 --max-num-mismatches 0 --enforce-Q30-check $ini
+echo $ini "done" > ../../output/0_merge/0B_ini/0B_merge_progession.txt
+done
+
+# deactivate conda environment
+conda deactivate 
+```
+
+```{r engine='bash', attr.output='style="max-height: 300px;"'}
+# cp merged sequence in sequence_merged folder
+mv ../../output/0_merge/0B_ini/*MERGED* ../../output/0_merge/0C_merged
+
+# check output
+ls ../../output/0_merge/0C_merged
+
+# combine merged files 
+cat ../../output/0_merge/0C_merged/*_MERGED > ../../output/0_merge/0D_combined/combined_file.fasta
+
+# check output
+ls ../../output/0_merge/0D_combined
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
+

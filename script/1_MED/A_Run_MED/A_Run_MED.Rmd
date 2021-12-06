@@ -1,0 +1,204 @@
+---
+title: "Filter data and run MED"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+    code_folding: "show"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# load main custom functions
+source("../../source/functions.R")
+
+# load packages
+packages <- c("tidyverse", "kableExtra", "Biostrings", "seqinr", "ggplot2", "openxlsx")
+invisible(lapply(packages, require, character.only = TRUE))
+
+# create output folders if needed
+if (!dir.exists("../../../output/1_MED")) {dir.create("../../../output/1_MED")}
+if (!dir.exists("../../../output/1_MED/1A")) {dir.create("../../../output/1_MED/1A")}
+
+# variable for path
+output <- "../../../"
+```
+
+# Load metadata
+
+```{r warning=FALSE, message=FALSE}
+# load Supplementary Table 1 - Sheet 1
+metadata <- read.xlsx(paste0(output, "metadata/Supplementary_Table_1.xlsx"), sheet=1)
+
+# remove special characters from Sample ID
+metadata$Sample.ID <- gsub("[^0-9A-Za-z///' ]","" ,metadata$Sample.ID,  ignore.case = TRUE)
+
+# select useful columns for workflow
+metadata <- metadata %>% select(-c(7, 10:18))
+
+# change colnames 
+colnames(metadata) <- c("Sample", "Strain", "Field", "Country", "Organ", "Species", "Run", "Control")
+
+# set rownames
+rownames(metadata) <- metadata$Sample
+
+# save this metadata table that will be used for the other scripts
+write.table(metadata, paste0(output, "metadata/metadata.csv"), sep=";", row.names = FALSE)
+```
+
+# Prepare data for MED
+
+To be run in MED workflow, data needs to be in this form (https://merenlab.org/2012/05/11/oligotyping-pipeline-explained/#preparing-the-fasta-file) : 
+
+```{r}
+cat(
+" >Sample-01_ReadX
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-01_ReadY
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-01_ReadZ
+ GGTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-02_ReadN
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA
+ >Sample-02_ReadM
+ GTTGAAAAAGTTAGTGGTGAAATCCCAGA")
+```
+
+## Remove sample with less than 1000 reads (with exceptions)
+
+```{r warning=FALSE, message=FALSE}
+# load the fasta file
+fasta_res <- load_sequence_file(paste0(output, "output/0_merge/0D_combined/"), filename="combined_file.fasta")
+
+read_by_sample <- fasta_res[[1]]
+fasta_df <- fasta_res[[2]]
+
+# list and remove samples with less than 1000 reads except to NP20, NP29, NP30, NP34 et NP36
+
+colnames(read_by_sample)[1] <- "Sample"
+metadata <- metadata %>% merge(read_by_sample, by="Sample")
+levels(metadata$Strain)
+
+# save number of reads by sample
+write.table(metadata, paste0(output, "output/1_MED/1A/1A_MED_metadata_nreads_before_filter.csv"), sep=";", row.names = FALSE)
+
+# remove sample with less than 1000 reads except to NP20, NP29, NP30, NP34 et NP36
+nmax = 1000
+bad_samples <- metadata[metadata$nread<nmax,]
+
+toremove <- c("NP20", "NP29", "NP30", "NP34", "NP36")
+bad_samples <- bad_samples[!(bad_samples$Sample %in% toremove), ]
+
+metadata <- metadata[!metadata$Sample %in% bad_samples$Sample, ]
+
+# save number of reads by sample after filter
+write.table(metadata, paste0(output, "output/1_MED/1A/1A_MED_metadata_nreads_after_filter.csv"), sep=";", row.names = FALSE)
+```
+
+## Plot of number of reads by sample
+```{r fig.height = 12, fig.width=18}
+
+p <- ggplot(metadata, aes(x = Sample, y = nread))+ 
+  geom_bar(position = "dodge", stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90),
+        legend.title = element_text(size = 18), 
+        legend.position="bottom",
+        legend.text=element_text(size=11), 
+        panel.spacing.y=unit(1, "lines"), 
+        panel.spacing.x=unit(0.8, "lines"),
+        panel.spacing=unit(0,"lines"),
+        strip.background=element_rect(color="grey30", fill="grey90"),
+        panel.border=element_rect(color="grey90"),
+        axis.ticks.x=element_blank(),
+        strip.text.x = element_text(size = 12)) +
+  guides(fill=guide_legend(title="Sample", label.theme = element_text(size = 10, face = "italic", 
+                                                                      colour = "Black", angle = 0)))+
+  facet_wrap(~Species+Strain+Organ, scales = "free_x", ncol=4)+
+  labs(y="Sequence counts")+
+  ylim(0, 900000)+
+  geom_text(aes(label=nread), 
+            position=position_dodge(width=0.5), 
+            size=2, hjust=-0.25, vjust=0.25, angle=90)+
+  scale_fill_manual(values = col)+
+  theme_bw() +
+  ggtitle("") 
+  
+p
+```
+
+## Total number of read and samples in the final fasta file
+
+```{r warning=FALSE}
+# Merge of fasta_df and metadata
+fasta_df$Sample_only <- sub("_.*", "", fasta_df$Sample)
+fasta_df <- droplevels(fasta_df)
+
+fasta_df_final <- fasta_df[fasta_df$Sample_only %in% metadata$Sample,]
+fasta_df_final <- droplevels(fasta_df_final)
+
+cat(paste0("Number of reads: ", nrow(fasta_df_final), "\n"))
+cat(paste0("Number of samples: ", levels(fasta_df_final$Sample_only %>% as.factor()) %>% length(), "\n"))
+```
+
+## Save fasta and list of the remove samples
+```{r warning=FALSE, message=FALSE}
+# objet R
+save(fasta_df_final,  file=paste0(output, "output/1_MED/1A/1A_MED_sequences.RData"))
+
+# write fasta
+write.fasta(sequences=as.list(fasta_df_final$Seq), names=fasta_df_final$Sample, file.out=paste0(output, "output/1_MED/1A/1A_MED_sequences.fasta"))
+
+# write list of the removed samples
+write.table(bad_samples, file=paste0(output, "output/1_MED/1A/1A_MED_removed_samples.tsv"), sep="\t", row.names=FALSE, quote = FALSE)
+```
+
+# Run MED
+
+To run MED, we used a docker container where oligotyping v2.1 were installed. To install this container, you can follow this great tutorial : https://merenlab.org/2014/09/02/virtualbox/
+
+```{r engine='bash', attr.output='style="max-height: 300px;"'}
+# variable for path
+OUTPUT="../../../output"
+path_data="$OUTPUT/1_MED/1A"
+
+# move to work directory
+cd $path_data
+
+# run docker session
+docker run -d --name oligotyping --rm -v `pwd`:`pwd` -w `pwd` -it meren/oligotyping:2.1
+
+# check files 
+docker exec oligotyping ls 
+
+# get info from fasta 
+docker exec oligotyping o-get-sample-info-from-fasta 1A_MED_sequences.fasta
+
+# fill gaps
+docker exec oligotyping o-pad-with-gaps 1A_MED_sequences.fasta 
+
+# get info from fasta to check if all is good after the fill gaps step
+docker exec oligotyping o-get-sample-info-from-fasta 1A_MED_sequences.fasta-PADDED-WITH-GAPS
+
+# run MED
+docker exec oligotyping decompose 1A_MED_sequences.fasta-PADDED-WITH-GAPS
+
+# kill docker container
+docker container kill oligotyping
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
+
+

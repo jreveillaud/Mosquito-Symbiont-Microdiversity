@@ -19,7 +19,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r message=FALSE, warning=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
@@ -34,10 +33,10 @@ invisible(lapply(packages, require, character.only = TRUE))
 ### Seqtab
 ```{r warning=FALSE}
 # move to oligotyping directory
-setwd(paste0(path_oligo,"/legionella/oligotyping_Legionella_sequences-c4-s1-a0.0-A0-M10"))
+path_legio <- "../../../../output/2_Oligotyping/2A/Legionella/2A_oligotyping_Legionella_sequences-c4-s1-a0.0-A0-M10"
 
 # load the matrix count table
-matrix_count <- read.table("MATRIX-COUNT.txt", header = TRUE) %>% t()
+matrix_count <- read.table(paste0(path_legio, "/MATRIX-COUNT.txt"), header = TRUE) %>% t()
 
 # arrange it
 colnames(matrix_count) <- matrix_count[1,]
@@ -52,11 +51,8 @@ matrix_count %>%
 
 ### Taxonomy
 ```{r warning=FALSE}
-# move to oligotyping directory
-setwd(paste0(path_oligo,"/legionella/oligotyping_Legionella_sequences-c4-s1-a0.0-A0-M10"))
-
 # load the fasta table
-fasta <- readDNAStringSet("OLIGO-REPRESENTATIVES.fasta")
+fasta <- readDNAStringSet(paste0(path_legio, "/OLIGO-REPRESENTATIVES.fasta"))
 
 # arrange it
 fasta <- fasta %>% as.data.frame()
@@ -75,11 +71,8 @@ fasta %>%
 ```{r warning=FALSE}
 # Reference file 
 
-## move to tsv directory
-setwd(path_tsv)
-
 ## load the reference table
-ref_oligo_med2 <- read.table("2B_REF_info_legionella.tsv", sep="\t", header = TRUE)
+ref_oligo_med2 <- read.table("../../../../output/2_Oligotyping/2B/2B_REF_info_legionella.tsv", sep="\t", header = TRUE)
 
 ## select only the 3 oligotypes of Legionella
 ref_oligo_med2 <- ref_oligo_med2[!is.na(ref_oligo_med2$oligotype),]
@@ -130,7 +123,7 @@ fasta2 %>%
 ```
 ### Metadata
 ```{r}
-metadata <- read.csv(paste0(path_metadata,"/metadata_22_06_21.csv"), sep=";")
+metadata <- read.csv("../../../../metadata/metadata.csv", sep=";")
 rownames(metadata) <- metadata$Sample
 ```
 
@@ -161,8 +154,7 @@ ps
 
 #### Load ps with all samples (for final plot)
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ps.filter <- check_ps(ps.filter)
 ```
 
@@ -173,18 +165,18 @@ guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 16
 # add read depth in sample table of phyloseq object
 sample_data(ps.filter)$Read_depth <- sample_sums(ps.filter)
 
-# select Wolbachia
+# select Legionella
 ps.legionella <- ps.filter %>% subset_taxa(Genus=="Legionella")
 
-# add read depth of Wolbachia
+# add read depth of Legionella
 sample_data(ps.filter)$Read_legionella <- sample_sums(ps.legionella)
 sample_data(ps.filter) %>% colnames()
 sample_data(ps.legionella) %>% colnames()
 
-# add percent of Wolbachia
+# add percent of Legionella
 sample_data(ps.filter)$Percent_legionella <- sample_data(ps.filter)$Read_legionella / sample_data(ps.filter)$Read_depth
 
-# round the percent of Wolbachia at 2 decimals
+# round the percent of Legionella at 2 decimals
 sample_data(ps.filter)$Percent_legionella <- sample_data(ps.filter)$Percent_legionella %>% round(2)
 
 # extract metadata table
@@ -202,6 +194,75 @@ new.metadata %>%
 
 # replace metadata in the created phyloseq object
 sample_data(ps) <- sample_data(new.metadata)
+```
+
+#### Percent by oligotype
+```{r}
+# Oligotype CGC
+
+oligo_AAAA  <- ps %>% 
+  subset_samples(Organ=="Whole") %>%
+  subset_taxa(ref=="oligotype_AAAA (34) | size:34561 / node_N0635 (35) | size:38385")
+
+oligo_AAAA  <- prune_taxa(taxa_sums(oligo_AAAA ) >= 1, oligo_AAAA )
+oligo_AAAA  <- prune_samples(sample_sums(oligo_AAAA ) >= 1, oligo_AAAA )
+  
+oligo_AAAA  %>% taxa_sums() -> sum_oligo_1
+oligo_AAAA @sam_data$Read_depth %>% sum() -> sum_total_1
+
+sum_oligo_1 / sum_total_1 *100 # 4.39%
+sum_oligo_1 / 6452623 *100 # 1.03%
+
+data.frame("Sample"=oligo_AAAA @sam_data$Sample, 
+           "Read_tot" = oligo_AAAA @sam_data$Read_depth,
+           "Read_AAAA "=oligo_AAAA  %>% sample_sums(),
+           "Percent_AAAA "=round((oligo_AAAA  %>% sample_sums() / oligo_AAAA @sam_data$Read_depth *100),2))
+
+mean(round((oligo_AAAA  %>% sample_sums() / oligo_AAAA @sam_data$Read_depth *100),2))
+
+# Oligotype CGGA
+
+oligo_CGGA <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_CGGA (39) | size:56507 / node_N1065 (39) | size:56507")
+
+oligo_CGGA <- prune_taxa(taxa_sums(oligo_CGGA) >= 1, oligo_CGGA)
+oligo_CGGA <- prune_samples(sample_sums(oligo_CGGA) >= 1, oligo_CGGA)
+  
+oligo_CGGA %>% taxa_sums() -> sum_oligo_2
+oligo_CGGA@sam_data$Read_depth %>% sum() -> sum_total_2
+
+sum_oligo_2 / sum_total_2 *100 # 1.97%
+sum_oligo_2 / 6452623 *100 # 0.19%
+
+data.frame("Sample"=oligo_CGGA@sam_data$Sample, 
+           "Read_tot" = oligo_CGGA@sam_data$Read_depth,
+           "Read_CGGA"=oligo_CGGA %>% sample_sums(),
+           "Percent_CGGA"=round((oligo_CGGA %>% sample_sums() / oligo_CGGA@sam_data$Read_depth *100),2))
+
+mean(round((oligo_CGGA %>% sample_sums() / oligo_CGGA@sam_data$Read_depth *100),2))
+
+# Oligotype CGGG
+
+oligo_CGGG <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_CGGG (19) | size:5881 / node_N1068 (19) | size:5881")
+
+oligo_CGGG <- prune_taxa(taxa_sums(oligo_CGGG) >= 1, oligo_CGGG)
+oligo_CGGG <- prune_samples(sample_sums(oligo_CGGG) >= 1, oligo_CGGG)
+  
+oligo_CGGG %>% taxa_sums() -> sum_oligo_3 
+oligo_CGGG@sam_data$Read_depth %>% sum() -> sum_total_3 
+
+sum_oligo_3 / sum_total_3 *100 # 3.7%
+sum_oligo_3 / 6452623 *100 # 0.41%
+
+data.frame("Sample"=oligo_CGGG@sam_data$Sample, 
+           "Read_tot" = oligo_CGGG@sam_data$Read_depth,
+           "Read_CGGG"=oligo_CGGG %>% sample_sums(),
+           "Percent_CGGG"=round((oligo_CGGG %>% sample_sums() / oligo_CGGG@sam_data$Read_depth *100),2))
+
+mean(round((oligo_CGGG %>% sample_sums() / oligo_CGGG@sam_data$Read_depth *100),2))
 ```
 
 # Taxonomic structure
@@ -446,54 +507,50 @@ p_taxo
 ## Save taxonomic plot
 
 ```{r warning=FALSE}
-setwd(path_plot)
-
-tiff("2Df_OLIGO_counts_legionella.tiff", units="in", width=20, height=18, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Df_OLIGO_counts_legionella.tiff", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-tiff("2Df_OLIGO_taxonomic_legionella_whole.tiff", units="in", width=16, height=12, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Df_OLIGO_taxonomic_legionella_whole.tiff", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-tiff("2Df_OLIGO_taxonomic_legionella_ovary.tiff", units="in", width=18, height=14, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Df_OLIGO_taxonomic_legionella_ovary.tiff", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-tiff("2Df_OLIGO_taxonomic_legionella.tiff", units="in", width=18, height=16, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Df_OLIGO_taxonomic_legionella.tiff", units="in", width=18, height=16, res=300)
 p_taxo
 dev.off()
 
-png("2Df_OLIGO_counts_legionella_big.png", units="in", width=20, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Df_OLIGO_counts_legionella_big.png", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-png("2Df_OLIGO_counts_legionella_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Df_OLIGO_counts_legionella_small.png", units="in", width=18, height=14, res=300)
 p_counts
 dev.off()
 
-png("2Df_OLIGO_taxonomic_legionella_whole.png", units="in", width=16, height=12, res=300)
+png("../../../../output/2_Oligotyping/2D/2Df_OLIGO_taxonomic_legionella_whole.png", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-png("2Df_OLIGO_taxonomic_legionella_ovary.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Df_OLIGO_taxonomic_legionella_ovary.png", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-png("2Df_OLIGO_taxonomic_legionella_big.png", units="in", width=18, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Df_OLIGO_taxonomic_legionella_big.png", units="in", width=18, height=18, res=300)
 p_taxo
 dev.off()
 
-png("2Df_OLIGO_taxonomic_legionella_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Df_OLIGO_taxonomic_legionella_small.png", units="in", width=18, height=14, res=300)
 p_taxo
 dev.off()
 ```
 
 # Make main plot
 ```{r warning=FALSE, fig.height = 12, fig.width=18}
-setwd(paste0(path_oligo,"/legionella/oligotyping_Legionella_sequences-c4-s1-a0.0-A0-M10/HTML-OUTPUT"))
-
-img <- magick::image_read("entropy.png")
+img <- magick::image_read(paste0(path_legio, "/HTML-OUTPUT/entropy.png"))
 p_entropy <- magick::image_ggplot(img, interpolate = TRUE)
 p_entropy+ theme(plot.margin = unit(c(-7,-2.5,-7,-0.5), "cm"))
 p_entropy+ theme(plot.margin=unit(c(-7,-2,-12,-5), "mm"))
@@ -519,18 +576,19 @@ t_plot <- plot_grid(aligned,
 t_plot
 
 
-setwd(path_plot)
-
-tiff("2Df_OLIGO_main_legionella.tiff", width=36, height=36, res=300, units="in")
+tiff("../../../../output/2_Oligotyping/2D/2Df_OLIGO_main_legionella.tiff", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 
-png("2Df_OLIGO_main_legionella.png", width=36, height=36, res=300, units="in")
+png("../../../../output/2_Oligotyping/2D/2Df_OLIGO_main_legionella.png", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 ```
 
-
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
 
 
 

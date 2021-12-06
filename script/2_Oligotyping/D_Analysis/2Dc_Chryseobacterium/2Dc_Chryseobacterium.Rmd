@@ -19,7 +19,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r message=FALSE, warning=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
@@ -34,10 +33,10 @@ invisible(lapply(packages, require, character.only = TRUE))
 ### Seqtab
 ```{r warning=FALSE}
 # move to oligotyping directory
-setwd(paste0(path_oligo,"/chryseobacterium/oligotyping_Chryseobacterium_sequences-c3-s1-a0.0-A0-M10"))
+path_chryseo <- "../../../../output/2_Oligotyping/2A/Chryseobacterium/2A_oligotyping_Chryseobacterium_sequences-c3-s1-a0.0-A0-M10"
 
 # load the matrix count table
-matrix_count <- read.table("MATRIX-COUNT.txt", header = TRUE) %>% t()
+matrix_count <- read.table(paste0(path_chryseo, "/MATRIX-COUNT.txt"), header = TRUE) %>% t()
 
 # arrange it
 colnames(matrix_count) <- matrix_count[1,]
@@ -52,11 +51,8 @@ matrix_count %>%
 
 ### Taxonomy
 ```{r warning=FALSE}
-# move to oligotyping directory
-setwd(paste0(path_oligo,"/chryseobacterium/oligotyping_Chryseobacterium_sequences-c3-s1-a0.0-A0-M10"))
-
 # load the fasta table
-fasta <- readDNAStringSet("OLIGO-REPRESENTATIVES.fasta")
+fasta <- readDNAStringSet(paste0(path_chryseo, "/OLIGO-REPRESENTATIVES.fasta"))
 
 # arrange it
 fasta <- fasta %>% as.data.frame()
@@ -75,11 +71,8 @@ fasta %>%
 ```{r warning=FALSE}
 # Reference file 
 
-## move to tsv directory
-setwd(path_tsv)
-
 ## load the reference table
-ref_oligo_med2 <- read.table("2B_REF_info_chryseobacterium.tsv", sep="\t", header = TRUE)
+ref_oligo_med2 <- read.table("../../../../output/2_Oligotyping/2B/2B_REF_info_chryseobacterium.tsv", sep="\t", header = TRUE)
 
 ## select only the 3 oligotypes of Chryseobacterium
 ref_oligo_med2 <- ref_oligo_med2[!is.na(ref_oligo_med2$oligotype),]
@@ -130,7 +123,7 @@ fasta2 %>%
 ```
 ### Metadata
 ```{r}
-metadata <- read.csv(paste0(path_metadata,"/metadata_22_06_21.csv"), sep=";")
+metadata <- read.csv("../../../../metadata/metadata.csv", sep=";")
 rownames(metadata) <- metadata$Sample
 ```
 
@@ -161,8 +154,7 @@ ps
 
 #### Load ps with all samples (for final plot)
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ps.filter <- check_ps(ps.filter)
 ```
 
@@ -173,18 +165,18 @@ guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 16
 # add read depth in sample table of phyloseq object
 sample_data(ps.filter)$Read_depth <- sample_sums(ps.filter)
 
-# select Wolbachia
+# select Chryseobacterium
 ps.chryseobacterium <- ps.filter %>% subset_taxa(Genus=="Chryseobacterium")
 
-# add read depth of Wolbachia
+# add read depth of Chryseobacterium
 sample_data(ps.filter)$Read_chryseobacterium <- sample_sums(ps.chryseobacterium)
 sample_data(ps.filter) %>% colnames()
 sample_data(ps.chryseobacterium) %>% colnames()
 
-# add percent of Wolbachia
+# add percent of Chryseobacterium
 sample_data(ps.filter)$Percent_chryseobacterium <- sample_data(ps.filter)$Read_chryseobacterium / sample_data(ps.filter)$Read_depth
 
-# round the percent of Wolbachia at 2 decimals
+# round the percent of Chryseobacterium at 2 decimals
 sample_data(ps.filter)$Percent_chryseobacterium <- sample_data(ps.filter)$Percent_chryseobacterium %>% round(2)
 
 # extract metadata table
@@ -203,6 +195,128 @@ new.metadata %>%
 # replace metadata in the created phyloseq object
 sample_data(ps) <- sample_data(new.metadata)
 ```
+
+#### Percent by oligotype
+```{r}
+# Oligotype CGC
+
+oligo_CGC <- ps %>% 
+  subset_samples(Organ=="Whole") %>%
+  subset_taxa(ref=="oligotype_CGC (11) | size:66891 / node_N1030 (11) | size:64053")
+
+oligo_CGC <- prune_taxa(taxa_sums(oligo_CGC) >= 1, oligo_CGC)
+oligo_CGC <- prune_samples(sample_sums(oligo_CGC) >= 1, oligo_CGC)
+  
+oligo_CGC %>% taxa_sums() -> sum_oligo_1
+oligo_CGC@sam_data$Read_depth %>% sum() -> sum_total_1
+
+sum_oligo_1 / sum_total_1 *100 # 4.39%
+sum_oligo_1 / 6452623 *100 # 1.03%
+
+data.frame("Sample"=oligo_CGC@sam_data$Sample, 
+           "Read_tot" = oligo_CGC@sam_data$Read_depth,
+           "Read_CGC"=oligo_CGC %>% sample_sums(),
+           "Percent_CGC"=round((oligo_CGC %>% sample_sums() / oligo_CGC@sam_data$Read_depth *100),2)) -> df1
+mean(round((oligo_CGC %>% sample_sums() / oligo_CGC@sam_data$Read_depth *100),2))
+median(round((oligo_CGC %>% sample_sums() / oligo_CGC@sam_data$Read_depth *100),2))
+min(round((oligo_CGC %>% sample_sums() / oligo_CGC@sam_data$Read_depth *100),2))
+max(round((oligo_CGC %>% sample_sums() / oligo_CGC@sam_data$Read_depth *100),2))
+
+# Oligotype TAC
+
+oligo_TAC <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_TAC (30) | size:12689 / node_N1035 (30) | size:12689")
+
+oligo_TAC <- prune_taxa(taxa_sums(oligo_TAC) >= 1, oligo_TAC)
+oligo_TAC <- prune_samples(sample_sums(oligo_TAC) >= 1, oligo_TAC)
+  
+oligo_TAC %>% taxa_sums() -> sum_oligo_2
+oligo_TAC@sam_data$Read_depth %>% sum() -> sum_total_2
+
+sum_oligo_2 / sum_total_2 *100 # 1.97%
+sum_oligo_2 / 6452623 *100 # 0.19%
+
+data.frame("Sample"=oligo_TAC@sam_data$Sample, 
+           "Read_tot" = oligo_TAC@sam_data$Read_depth,
+           "Read_TAC"=oligo_TAC %>% sample_sums(),
+           "Percent_TAC"=round((oligo_TAC %>% sample_sums() / oligo_TAC@sam_data$Read_depth *100),2)) -> df2
+mean(round((oligo_TAC %>% sample_sums() / oligo_TAC@sam_data$Read_depth *100),2))
+median(round((oligo_TAC %>% sample_sums() / oligo_TAC@sam_data$Read_depth *100),2))
+min(round((oligo_TAC %>% sample_sums() / oligo_TAC@sam_data$Read_depth *100),2))
+max(round((oligo_TAC %>% sample_sums() / oligo_TAC@sam_data$Read_depth *100),2))
+
+# Oligotype TAT
+
+oligo_TAT <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_TAT (35) | size:26519 / node_N1034 (35) | size:26519")
+
+oligo_TAT <- prune_taxa(taxa_sums(oligo_TAT) >= 1, oligo_TAT)
+oligo_TAT <- prune_samples(sample_sums(oligo_TAT) >= 1, oligo_TAT)
+  
+oligo_TAT %>% taxa_sums() -> sum_oligo_3 
+oligo_TAT@sam_data$Read_depth %>% sum() -> sum_total_3 
+
+sum_oligo_3 / sum_total_3 *100 # 3.7%
+sum_oligo_3 / 6452623 *100 # 0.41%
+
+data.frame("Sample"=oligo_TAT@sam_data$Sample, 
+           "Read_tot" = oligo_TAT@sam_data$Read_depth,
+           "Read_TAT"=oligo_TAT %>% sample_sums(),
+           "Percent_TAT"=round((oligo_TAT %>% sample_sums() / oligo_TAT@sam_data$Read_depth *100),2)) -> df3
+mean(round((oligo_TAT %>% sample_sums() / oligo_TAT@sam_data$Read_depth *100),2))
+median(round((oligo_TAT %>% sample_sums() / oligo_TAT@sam_data$Read_depth *100),2))
+min(round((oligo_TAT %>% sample_sums() / oligo_TAT@sam_data$Read_depth *100),2))
+max(round((oligo_TAT %>% sample_sums() / oligo_TAT@sam_data$Read_depth *100),2))
+```
+
+
+#### Percent by oligotype (whole + ovary)
+```{r}
+# Oligotype CGC
+
+oligo_CGC <- ps %>% 
+  subset_taxa(ref=="oligotype_CGC (11) | size:66891 / node_N1030 (11) | size:64053")
+
+oligo_CGC <- prune_taxa(taxa_sums(oligo_CGC) >= 1, oligo_CGC)
+oligo_CGC <- prune_samples(sample_sums(oligo_CGC) >= 1, oligo_CGC)
+  
+oligo_CGC %>% taxa_sums() -> sum_oligo_1
+oligo_CGC@sam_data$Read_depth %>% sum() -> sum_total_1
+
+sum_oligo_1 / sum_total_1 *100 # 4.37%
+sum_oligo_1 / 6452623 *100 # 1.04%
+
+# Oligotype TAC
+
+oligo_TAC <- ps %>% 
+  subset_taxa(ref=="oligotype_TAC (30) | size:12689 / node_N1035 (30) | size:12689")
+
+oligo_TAC <- prune_taxa(taxa_sums(oligo_TAC) >= 1, oligo_TAC)
+oligo_TAC <- prune_samples(sample_sums(oligo_TAC) >= 1, oligo_TAC)
+  
+oligo_TAC %>% taxa_sums() -> sum_oligo_2
+oligo_TAC@sam_data$Read_depth %>% sum() -> sum_total_2
+
+sum_oligo_2 / sum_total_2 *100 # 1.97%
+sum_oligo_2 / 6452623 *100 # 0.20%
+
+# Oligotype TAT
+
+oligo_TAT <- ps %>% 
+  subset_taxa(ref=="oligotype_TAT (35) | size:26519 / node_N1034 (35) | size:26519")
+
+oligo_TAT <- prune_taxa(taxa_sums(oligo_TAT) >= 1, oligo_TAT)
+oligo_TAT <- prune_samples(sample_sums(oligo_TAT) >= 1, oligo_TAT)
+  
+oligo_TAT %>% taxa_sums() -> sum_oligo_3 
+oligo_TAT@sam_data$Read_depth %>% sum() -> sum_total_3 
+
+sum_oligo_3 / sum_total_3 *100 # 3.6%
+sum_oligo_3 / 6452623 *100 # 0.41%
+```
+
 
 # Taxonomic structure
 
@@ -442,54 +556,50 @@ p_taxo
 ## Save taxonomic plot
 
 ```{r warning=FALSE}
-setwd(path_plot)
-
-tiff("2Dc_OLIGO_counts_chryseobacterium.tiff", units="in", width=20, height=18, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_counts_chryseobacterium.tiff", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-tiff("2Dc_OLIGO_taxonomic_chryseobacterium_whole.tiff", units="in", width=16, height=12, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_taxonomic_chryseobacterium_whole.tiff", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-tiff("2Dc_OLIGO_taxonomic_chryseobacterium_ovary.tiff", units="in", width=18, height=14, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_taxonomic_chryseobacterium_ovary.tiff", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-tiff("2Dc_OLIGO_taxonomic_chryseobacterium.tiff", units="in", width=18, height=16, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_taxonomic_chryseobacterium.tiff", units="in", width=18, height=16, res=300)
 p_taxo
 dev.off()
 
-png("2Dc_OLIGO_counts_chryseobacterium_big.png", units="in", width=20, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_counts_chryseobacterium_big.png", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-png("2Dc_OLIGO_counts_chryseobacterium_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_counts_chryseobacterium_small.png", units="in", width=18, height=14, res=300)
 p_counts
 dev.off()
 
-png("2Dc_OLIGO_taxonomic_chryseobacterium_whole.png", units="in", width=16, height=12, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_taxonomic_chryseobacterium_whole.png", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-png("2Dc_OLIGO_taxonomic_chryseobacterium_ovary.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_taxonomic_chryseobacterium_ovary.png", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-png("2Dc_OLIGO_taxonomic_chryseobacterium_big.png", units="in", width=18, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_taxonomic_chryseobacterium_big.png", units="in", width=18, height=18, res=300)
 p_taxo
 dev.off()
 
-png("2Dc_OLIGO_taxonomic_chryseobacterium_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_taxonomic_chryseobacterium_small.png", units="in", width=18, height=14, res=300)
 p_taxo
 dev.off()
 ```
 
 # Make main plot
 ```{r warning=FALSE, fig.height = 12, fig.width=18}
-setwd(paste0(path_oligo,"/chryseobacterium/oligotyping_Chryseobacterium_sequences-c3-s1-a0.0-A0-M10/HTML-OUTPUT"))
-
-img <- magick::image_read("entropy.png")
+img <- magick::image_read(paste0(path_chryseo, "/HTML-OUTPUT/entropy.png"))
 p_entropy <- magick::image_ggplot(img, interpolate = TRUE)
 p_entropy+ theme(plot.margin = unit(c(-7,-2.5,-7,-0.5), "cm"))
 p_entropy+ theme(plot.margin=unit(c(-7,-2,-12,-5), "mm"))
@@ -515,19 +625,20 @@ t_plot <- plot_grid(aligned,
 t_plot
 
 
-setwd(path_plot)
-
-tiff("2Dc_OLIGO_main_chryseobacterium.tiff", width=36, height=36, res=300, units="in")
+tiff("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_main_chryseobacterium.tiff", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 
-png("2Dc_OLIGO_main_chryseobacterium.png", width=36, height=36, res=300, units="in")
+png("../../../../output/2_Oligotyping/2D/2Dc_OLIGO_main_chryseobacterium.png", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 ```
 
 
-
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
 
 
 

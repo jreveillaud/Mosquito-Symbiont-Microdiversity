@@ -18,26 +18,27 @@ knitr::opts_chunk$set(echo = TRUE)
 # Paths and libraries setting
 
 ```{r, warning=FALSE, message=FALSE}
-# Load main packages, paths and custom functions
+# load main packages, paths and custom functions
 source("../../source/main_packages.R")
-source("../../source/paths.R")
 source("../../source/functions.R")
 
-# Load supplementary packages
+# load supplementary packages
 packages <- c("Biostrings", "seqinr", "kableExtra")
 invisible(lapply(packages, require, character.only = TRUE))
+
+# create output folders if needed
+if (!dir.exists("../../../output/2_Oligotyping/2E")) {dir.create("../../../output/2_Oligotyping/2E")}
 ```
 
 # Import fasta from oligotyping results
 
 ```{r warning=FALSE}
-setwd(paste0(path_oligo,"/wolbachia/oligotyping_Wolbachia_sequences-c2-s1-a0.0-A0-M10"))
-
-fasta_oligo <- readDNAStringSet("OLIGO-REPRESENTATIVES.fasta")
-fasta_oligo <- read.fasta("OLIGO-REPRESENTATIVES.fasta")
+fasta_oligo <- readDNAStringSet("../../../output/2_Oligotyping/2A/Wolbachia/2A_oligotyping_Wolbachia_sequences-c2-s1-a0.0-A0-M10/OLIGO-REPRESENTATIVES.fasta")
+fasta_oligo <- read.fasta("../../../output/2_Oligotyping/2A/Wolbachia/2A_oligotyping_Wolbachia_sequences-c2-s1-a0.0-A0-M10/OLIGO-REPRESENTATIVES.fasta")
 ```
 
 # Extract fragment from first Wolbachia oligotype (test)
+
 ```{r}
 myfrag <- getFrag(fasta_oligo[[1]], begin = 250, end = 279)
 ```
@@ -77,31 +78,52 @@ df %>%
   kable_paper("hover", full_width = F)
 ```
 
-# Save the fragments table
-```{r}
-setwd(path_tsv)
-write.table(df, "2E_MATCH_fragments.tsv", sep="\t", quote = FALSE, row.names = FALSE)
+# Save the fragment tables
+
+```{r warning=FALSE}
+write.table(df, "../../../output/2_Oligotyping/2E/2E_MATCH_fragments.tsv", sep="\t", quote = FALSE, row.names = FALSE)
+write.table(df[,2], "../../../output/2_Oligotyping/2E/2E_only_fragments.tsv", sep="\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
 ```
 
 # Do the screening
 
-```{bash}
-source /Volumes/MY_PASSPORT/draft_final/script/source/paths_for_bash.sh
+```{r engine='bash'}
+# load conda environment including illumina-utils
+source ~/opt/miniconda3/etc/profile.d/conda.sh
+conda activate anvio-7.1
 
-cd $PATH_MAIN/output/tsv
+# set paths and variables
+FILE="../../../output/2_Oligotyping/2E/2E_MATCH_fragments.tsv"
+FILE2="../../../output/2_Oligotyping/2E/2E_only_fragments.tsv"
+names=( $(cut -f1 $FILE | sed 1d) )
+seq=( $(cut -f1 $FILE2 | sed 1d) )
+one=( $(head -n 1 $FILE2) )
+seqs=($one ${seq[0]} ${seq[1]} ${seq[2]} ${seq[3]} ${seq[4]} ${seq[5]} ${seq[6]})
 
-names=$(cut -f1  2E_MATCH_fragments.tsv | sed 1d)
-
-i=0
-for frag in $(cut -f2  2E_MATCH_fragments.tsv | sed 1d)
-  do
-    echo $frag
-    anvi-script-get-primer-matches --samples-txt samples_wolbachia_screening.txt  \
-      --primer-sequences $frag \
+# search oligotypes in ovary metagenomes from Reveillaud et al 2019 and Bonneau et al 2018
+anvi-script-get-primer-matches --samples-txt ../../../additional_data/samples_wolbachia_screening.txt  \
+      --primer-sequences $FILE2 \
       --min-remainder-length 10 \
-      --output-dir $PATH_MAIN/output/screening/${names[i]}
-    i=i+1
+      --output-dir ../../../../output/2_Oligotyping/2E/
+
+# deactivate conda environment  
+conda deactivate
+
+# move results into a separated folder for each oligotype
+i=0
+for name in "${names[@]}"
+  do
+    echo $name
+    echo ${seqs[i]}
+    mv ../../../../output/2_Oligotyping/2E/*${seqs[i]}* ../../../../output/2_Oligotyping/2E/$name
+    i=$i+1
   done
 ```
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
+
+
 
 

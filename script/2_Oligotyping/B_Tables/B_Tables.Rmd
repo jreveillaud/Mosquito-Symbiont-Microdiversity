@@ -1,0 +1,100 @@
+---
+title: "Oligotyping - Tables"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Make reference tables between MED nodes and oligotypes
+
+## Paths and libraries setting
+
+```{r, warning=FALSE, message=FALSE}
+# load main packages, paths and custom functions
+source("../../source/main_packages.R")
+source("../../source/functions.R")
+
+# load supplementary packages
+packages <- c("Biostrings", "RColorBrewer")
+invisible(lapply(packages, require, character.only = TRUE))
+
+# create output folders if needed
+if (!dir.exists("../../../output/2_Oligotyping/2B")) {dir.create("../../../output/2_Oligotyping/2B")}
+```
+
+## Make tables
+```{r warning=FALSE}
+# Paths
+
+# Wolbachia
+make_reference_table(path_MED="../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4",
+                     path_OLIGO="../../../output/2_Oligotyping/2A/Wolbachia/2A_oligotyping_Wolbachia_sequences-c2-s1-a0.0-A0-M10", 
+                     path_RDATA="../../../output/1_MED/1D",
+                     path_TSV="../../../output/1_MED/1B",
+                     path_OUTPUT="../../../output/2_Oligotyping/2B",
+                     genus="wolbachia")
+
+# Asaia
+make_reference_table(path_MED="../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4",
+                     path_OLIGO="../../../output/2_Oligotyping/2A/Asaia/2A_oligotyping_Asaia_sequences-c5-s1-a0.0-A0-M10", 
+                     path_RDATA="../../../output/1_MED/1D",
+                     path_TSV="../../../output/1_MED/1B",
+                     path_OUTPUT="../../../output/2_Oligotyping/2B",
+                     genus="asaia")
+
+# Chryseobacterium
+make_reference_table(path_MED="../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4",
+                     path_OLIGO="../../../output/2_Oligotyping/2A/Chryseobacterium/2A_oligotyping_Chryseobacterium_sequences-c3-s1-a0.0-A0-M10", 
+                     path_RDATA="../../../output/1_MED/1D",
+                     path_TSV="../../../output/1_MED/1B",
+                     path_OUTPUT="../../../output/2_Oligotyping/2B",
+                     genus="chryseobacterium")
+
+# Elizabethkingia
+make_reference_table(path_MED="../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4",
+                     path_OLIGO="../../../output/2_Oligotyping/2A/Elizabethkingia/2A_oligotyping_Elizabethkingia_sequences-c1-s1-a0.0-A0-M10", 
+                     path_RDATA="../../../output/1_MED/1D",
+                     path_TSV="../../../output/1_MED/1B",
+                     path_OUTPUT="../../../output/2_Oligotyping/2B",
+                     genus="elizabethkingia")
+
+# Erwinia
+make_reference_table(path_MED="../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4",
+                     path_OLIGO="../../../output/2_Oligotyping/2A/Erwinia/2A_oligotyping_Erwinia_sequences-c8-s1-a0.0-A0-M10", 
+                     path_RDATA="../../../output/1_MED/1D",
+                     path_TSV="../../../output/1_MED/1B",
+                     path_OUTPUT="../../../output/2_Oligotyping/2B", 
+                     genus="erwinia")
+
+# Legionella
+make_reference_table(path_MED="../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4",
+                     path_OLIGO="../../../output/2_Oligotyping/2A/Legionella/2A_oligotyping_Legionella_sequences-c4-s1-a0.0-A0-M10", 
+                     path_RDATA="../../../output/1_MED/1D",
+                     path_TSV="../../../output/1_MED/1B",
+                     path_OUTPUT="../../../output/2_Oligotyping/2B", 
+                     genus="legionella")
+
+# Serratia
+make_reference_table(path_MED="../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4",
+                     path_OLIGO="../../../output/2_Oligotyping/2A/Serratia/2A_oligotyping_Serratia_sequences-c1-s1-a0.0-A0-M10", 
+                     path_RDATA="../../../output/1_MED/1D",
+                     path_TSV="../../../output/1_MED/1B",
+                     path_OUTPUT="../../../output/2_Oligotyping/2B", 
+                     genus="serratia")
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
+

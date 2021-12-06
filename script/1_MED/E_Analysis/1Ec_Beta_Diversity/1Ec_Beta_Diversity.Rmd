@@ -8,8 +8,8 @@ output:
     gallery: false
     fig_caption: true
     highlight: tango
-    toc_depth: 3
-    code_folding: "hide"
+    toc_depth: 4
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
@@ -23,7 +23,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, warning=FALSE, message=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
@@ -35,10 +34,9 @@ invisible(lapply(packages, require, character.only = TRUE))
 
 ## Preparation
 
-```{r warning=FALSE}
+```{r warning=FALSE, attr.output='style="max-height: 300px;"'}
 # load rdata file with phyloseq object
-setwd(path_rdata)
-ps <- readRDS("MED_phyloseq.rds")
+ps <- readRDS("../../../../output/1_MED/1C/1C_MED_phyloseq.rds")
 
 # transform count table into percent table
 ps.percent <- transform_sample_counts(ps, (function(x) x / sum(x)))
@@ -82,7 +80,9 @@ otu_wolbachia %>%
 ## HCA
 
 ### Run HCA
-```{r}
+```{r warning=FALSE}
+set.seed(10403)
+
 # Compute distance on samples with Wolbachia
 d.wolbachia <- dist(otu_wolbachia[,-1, drop=FALSE], method="euclidean")
 
@@ -92,41 +92,30 @@ hca.ward <- hclust(d.wolbachia,method="ward.D2")
 
 ### Dendogram
 ```{r width=12, warning=FALSE}
-# 2 groups
-plot(hca.ward)
-rect.hclust(hca.ward,k=2)
-
-# 3 groups
-plot(hca.ward, ask=FALSE)
-rect.hclust(hca.ward, k=3)
-
-# set displaying
-rh <- rect.hclust(hca.ward, k=3, border = c("red", "blue", "grey"))
+# params for dendogram plot
+plot(hca.ward, cex=0.7) 
+rh <- rect.hclust(hca.ward, k=3, border = c("red", "blue", "green"))
 beg_clus <- head(cumsum(c(1, lengths(rh))), -1)
 beg_clus <- beg_clus + 5
 y_clus <- weighted.mean(rev(hca.ward$height)[2:3], c(4, 1))
 
-# plot
+# dendogram plot
 plot(hca.ward, cex=0.7) 
-rect.hclust(hca.ward, k=3, border = c("red", "blue", "grey"))
-text(x=beg_clus, y=y_clus, col=c("red","blue", "grey"), labels=c("High infection", "Low infection", "Medium infection"), font=2)
-
-
+rect.hclust(hca.ward, k=3, border = c("red", "blue", "green"))
+text(x=beg_clus, y=y_clus, col=c("red","blue", "green"), labels=c("High infection", "Low infection", "Medium infection"), font=2)
 
 # save plot
-setwd(path_plot)
-tiff("1Ec_dendogram.tiff", units="in", width=18, height=8, res=300)
-plot(hca.ward, cex=0.7, xlab="Samples", sub="") 
-rect.hclust(hca.ward, k=3, border = c("red", "blue", "grey"))
-text(x=beg_clus, y=y_clus, col=c("red","blue", "grey"), labels=c("High infection", "Low infection", "Medium infection"), font=2)
+tiff("../../../../output/1_MED/1E/1Ec_dendogram.tiff", units="in", width=18, height=8, res=300)
+plot(hca.ward, cex=0.7, xlab="Samples", sub="")
+rect.hclust(hca.ward, k=3, border = c("red", "blue", "green"))
+text(x=beg_clus, y=y_clus, col=c("red","blue", "green"), labels=c("High infection", "Low infection", "Medium infection"), font=2)
 dev.off()
 
-png("1Ec_dendogram.png", units="in", width=18, height=8, res=300)
-plot(hca.ward, cex=0.7, xlab="Samples", sub="") 
-rect.hclust(hca.ward, k=3, border = c("red", "blue", "grey"))
-text(x=beg_clus, y=y_clus, col=c("red","blue", "grey"), labels=c("High infection", "Low infection", "Medium infection"), font=2)
+png("../../../../output/1_MED/1E/1Ec_dendogram.png", units="in", width=18, height=8, res=300)
+plot(hca.ward, cex=0.7, xlab="Samples", sub="")
+rect.hclust(hca.ward, k=3, border = c("red", "blue", "green"))
+text(x=beg_clus, y=y_clus, col=c("red","blue", "green"), labels=c("High infection", "Low infection", "Medium infection"), font=2)
 dev.off()
-
 ```
 
 ### Split
@@ -140,7 +129,7 @@ print(sort(hca.groups))
 
 ## Make a dataframe from these groups
 
-```{r}
+```{r warning=FALSE, attr.output='style="max-height: 300px;"'}
 # df
 wolbachia.groups <- print(sort(hca.groups)) %>% as.data.frame()
 
@@ -210,8 +199,7 @@ wolbachia.summary.labels %>%
 
 ```{r warning=FALSE}
 # load qPCR file
-setwd(path_qpcr)
-qpcr <- read.xlsx("quanttiWolbachiaschriekeetal.xlsx")
+qpcr <- read.xlsx("../../../../additional_data/quanttiWolbachiaschriekeetal.xlsx")
 
 # select Target/ref column
 qpcr <- qpcr[,c("Sample.Name", "Target/Ref")]
@@ -240,8 +228,7 @@ qpcr_wolbachia %>%
   kable_paper("hover", full_width = F)
 
 # add column with true ID in qpcr table
-setwd(path_qpcr)
-metadata <- openxlsx::read.xlsx("Supplementary_Table_1_V4_Shorten_w_ReadDepth_CheckqPCR.xlsx", sheet=1)
+metadata <- openxlsx::read.xlsx("../../../../additional_data/Supplementary_Table_1_V4_Shorten_w_ReadDepth_CheckqPCR.xlsx", sheet=1)
 qpcr$True_TubeID <- rownames(qpcr)
 qpcr <- qpcr %>% merge(metadata, by="True_TubeID", all.x=TRUE)
 qpcr <- qpcr %>% select(c(True_TubeID, Sample.ID, Ratio_Target_Ref))
@@ -265,14 +252,19 @@ hca.ward <- hclust(d.wolbachia,method="ward.D2")
 ```
 
 ### Dendogram
-```{r}
-# 3 groups
-plot(hca.ward)
-rect.hclust(hca.ward, k=3)
+```{r warning=FALSE}
+# params for dendogram plot
+plot(hca.ward, cex=0.7) 
+rh <- rect.hclust(hca.ward, k=2, border = c("green", "red"))
+beg_clus <- head(cumsum(c(1, lengths(rh))), -1)
+beg_clus <- beg_clus + 2
+beg_clus[2] <- beg_clus[2] + 6
+y_clus <- 15
 
-# 2 groups
-plot(hca.ward)
-rect.hclust(hca.ward,k=2)
+# dendogram plot
+plot(hca.ward, cex=0.7) 
+rect.hclust(hca.ward, k=2, border = c("green", "red"))
+text(x=beg_clus, y=y_clus, col=c("green", "red"), labels=c("Medium infection", "High infection"), font=2)
 ```
 
 ### Split
@@ -354,7 +346,7 @@ qpcr.summary.labels %>%
 ## Preparation
 
 ### Merge groups of data from phyloseq and data from qpcr
-```{r warning=FALSE}
+```{r warning=FALSE, attr.output='style="max-height: 300px;"'}
 # print wolbachia.groups (phyloseq)
 wolbachia.groups %>%
   kbl(booktable=TRUE) %>%
@@ -373,7 +365,10 @@ all.groups <- wolbachia.groups %>% merge(qpcr, by="Sample", all.x=TRUE)
 all.groups %>%
   kbl(booktable=TRUE) %>%
   kable_paper("hover", full_width = F)
+```
 
+### Compare groups from hca
+```{r warning=FALSE}
 # optionnal : all.groups for comparison
 all.groups.comparison <- wolbachia.groups %>% merge(qpcr, by="Sample")
 
@@ -411,8 +406,8 @@ p1 <- ggplot(all.groups.comparison, aes(x=Infection, y=qPCR_Ratio_Target_Ref, fi
   geom_boxplot(alpha=0.6, outlier.shape = NA)+
         geom_jitter(position=position_jitter(0.5), aes(color=Infection), alpha=0.6) +
         theme_bw(base_size = 14)+
-  scale_fill_manual(values = c("blue", "grey", "red"))+
-  scale_color_manual(values = c("blue", "grey", "red"))+
+  scale_fill_manual(values = c("blue", "green", "red"))+
+  scale_color_manual(values = c("blue", "green", "red"))+
   labs(x=expression(paste("\n", italic("Wolbachia"), "infection groups (from HCA)")), 
        y="Ratio Target Ref (qPCR)", 
        fill=expression(paste("\n", italic("Wolbachia"), "infection groups (from HCA)")))+
@@ -435,8 +430,8 @@ p9 <- ggplot(all.groups.comparison, aes(x=Infection, y=Wolbachia, fill=Infection
   geom_boxplot(alpha=0.6, outlier.shape = NA)+
   geom_jitter(position=position_jitter(0.5), aes(color=Infection), alpha=0.6) +
   theme_bw(base_size = 14)+
-  scale_fill_manual(values = c("blue", "grey", "red"))+
-  scale_color_manual(values = c("blue", "grey", "red"))+
+  scale_fill_manual(values = c("blue", "green", "red"))+
+  scale_color_manual(values = c("blue", "green", "red"))+
   labs(x=expression(paste("\n", italic("Wolbachia"), "infection groups (from HCA)")), 
        y=expression(paste("\n", italic("Wolbachia"), "infection (relative abundance)")), 
        fill="Infection")+
@@ -445,16 +440,14 @@ p9 <- ggplot(all.groups.comparison, aes(x=Infection, y=Wolbachia, fill=Infection
 
 p9
 
+# save
+write.table(all.groups.comparison, "../../../../output/1_MED/1E/1Ec_qpcr_comparison.tsv", sep="\t", row.names = FALSE, col.names=TRUE)
 
-setwd(path_tsv)
-write.table(all.groups.comparison, "1Ec_qpcr_comparison.tsv", sep="\t", row.names = FALSE, col.names=TRUE)
-
-setwd(path_plot)
-tiff("1Ec_boxplot.tiff", units="in", width=10, height=5, res=300)
+tiff("../../../../output/1_MED/1E/1Ec_boxplot.tiff", units="in", width=10, height=5, res=300)
 p1
 dev.off()
 
-png("1Ec_boxplot.png", units="in", width=10, height=5, res=300)
+png("../../../../output/1_MED/1E/1Ec_boxplot.png", units="in", width=10, height=5, res=300)
 p1
 dev.off()
 ```
@@ -463,8 +456,7 @@ dev.off()
 
 ```{r warning=FALSE}
 # load phyloseq object after decontam
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 
 # extract metadata
 sam <- data.frame(ps.filter@sam_data)
@@ -472,13 +464,6 @@ sam <- data.frame(ps.filter@sam_data)
 # add groups in sam table
 sam <- sam %>% merge(all.groups %>% select(c(Sample, Infection, Wolbachia, qPCR_Infection, qPCR_Ratio_Target_Ref)), by="Sample", all.x = TRUE)
 rownames(sam)<- sam$Sample
-
-# change levels for plot
-# levels(sam$Strain) <- c(levels(sam$Strain), "Laboratory - Lavar", "Laboratory - Slab TC (Wolbachia -)")
-# sam$Strain[sam$Strain=="Laboratory - Lavar"] <- "Laboratory - Lavar"
-# sam$Strain[sam$Strain=="Wolbachia -"] <- "Laboratory - Slab TC (Wolbachia -)"
-# sam$Strain <- droplevels(sam$Strain)
-# levels(sam$Strain)
 
 # add a column for qPCR measure
 sam$qPCR_measure <- "Yes"
@@ -489,7 +474,7 @@ sam[sam$qPCR_measure=="Yes" & sam$qPCR_Ratio_Target_Ref>0, "qPCR_measure"] <- ">
 # update sam table of phyloseq object
 sample_data(ps.filter) <- sam
 
-# transformation percent
+# transformation to percent
 ps_percent <- transform_sample_counts(ps.filter, function(x) x/sum(x)*100)
 
 # select whole
@@ -504,15 +489,17 @@ bray.culex_whole <- ordinate(ps_percent_whole, method="NMDS", distance="bray", t
 
 ## Plot
 
-### Raw data
+### Percent data
 
-```{r}
+#### All info
+
+```{r warning=FALSE}
 # all info
 p1 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Infection", shape=NA) +
   labs(x="NMDS1", y = "NMDS2")+
   stat_ellipse(geom = "polygon", level=0.95, alpha = 0.25, aes(fill = Species, color=NA))+
   scale_fill_manual(values=c("orange", "yellow","green"), labels = c(expression(italic("Aedes aegypti")), expression(italic("Culex pipiens")), expression(italic("Culex quinquefasciatus"))))+
-  scale_color_manual(values=c("blue", "grey","red"), breaks=c("Low infection", "Medium infection", "High infection"))+
+  scale_color_manual(values=c("blue", "green","red"), breaks=c("Low infection", "Medium infection", "High infection"))+
   scale_shape_manual(values=c(19,17,15,4,7), labels=c("Field - Bosc", "Field - Camping Europe", "Field - Guadeloupe", "Laboratory - Lavar", expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), "-)"))))+
   theme_gray()+
   labs(caption=paste("stress:", bray.culex_whole$stress %>% round(2), "\n", "ellipse level: 0.95"))+
@@ -531,7 +518,10 @@ p1[["guides"]][["colour"]][["title"]] <- expression(paste(italic("Wolbachia"), "
 p1+
   geom_point(aes(shape = Strain), size = 2)
 ```
-```{r}
+
+#### Wolbachia infection
+
+```{r warning=FALSE}
 # Wolbachia infection
 
 p2 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Infection", shape="qPCR_measure") +
@@ -568,7 +558,9 @@ p2 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Infection", sha
 p2
 ``` 
 
-```{r}
+#### Species
+
+```{r warning=FALSE}
 # species ("orange", "yellow", "green")
 p3 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Species") +
   
@@ -603,7 +595,10 @@ p3 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Species") +
 
 p3
 ```
-```{r}
+
+#### Strain
+
+```{r warning=FALSE}
 # Strain
 new_location <- c("Field - Guadeloupe", "Laboratory - Slab TC (Wolbachia -)", 
                   "Field - Bosc", "Field - Camping Europe", "Laboratory - Lavar")
@@ -646,7 +641,10 @@ p4 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Strain") +
 
 p4
 ```
-```{r}
+
+#### Field
+
+```{r warning=FALSE}
 # field
 p5 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Field") +
   geom_point(size = 2) +
@@ -672,7 +670,9 @@ p5 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Field") +
 p5
 ```
 
-```{r}
+#### Species and Strain
+
+```{r warning=FALSE}
 # species + strains
 p6 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Strain", shape=NA) +
   labs(x="NMDS1", y = "NMDS2")+
@@ -683,7 +683,7 @@ p6 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="Strain", shape=
                                 "Field - Bosc", 
                                 "Field - Camping Europe", 
                                 "Laboratory - Lavar"))+
-  scale_shape_manual(values = c(15,16,17), labels=c(expression(italic("Aedes aegypti")), expression(italic("Culex pipiens")), expression(italic("Culex quinquefasciatus"))))+
+  scale_shape_manual(values = c(15,4,17), labels=c(expression(italic("Aedes aegypti")), expression(italic("Culex pipiens")), expression(italic("Culex quinquefasciatus"))))+
   theme_gray()+
   #labs(caption=paste("stress:", bray.culex_whole$stress %>% round(2), "\n", "ellipse level: 0.95"))+
   guides(fill = guide_legend(order = 1),
@@ -699,7 +699,9 @@ p6[["guides"]][["shape"]][["title"]] <- "Species"
 p6
 ```
 
-```{r}
+#### Compare Wolbachia abundance by strain in Culex pipiens
+
+```{r warning=FALSE}
 sam2 <- sam[sam$Species=="Culex pipiens",]
 
 means <- aggregate(Wolbachia ~ Strain , sam2, median)
@@ -716,8 +718,8 @@ p7 <- ggplot(sam2, aes(x=Strain, y=Wolbachia, fill=Strain)) +
   geom_boxplot(alpha=0.6, outlier.shape = NA)+
   geom_jitter(position=position_jitter(0.5), aes(color=Strain), alpha=0.6) +
   theme_bw(base_size = 14)+
-  scale_fill_manual(values = c("blue", "grey", "red"))+
-  scale_color_manual(values = c("blue", "grey", "red"))+
+  scale_fill_manual(values = c("blue", "green", "red"))+
+  scale_color_manual(values = c("blue", "green", "red"))+
   labs(x="\nStrain", 
        y=expression(paste("\n", italic("Wolbachia"), "infection (relative abundance)")),
        fill="Strain")+
@@ -740,7 +742,11 @@ means <- aggregate(qPCR_Ratio_Target_Ref ~ Strain , sam2, median)
 means$qPCR_Ratio_Target_Ref<- means$qPCR_Ratio_Target_Ref %>% round(2)
 
 wilcox.test(qPCR_Ratio_Target_Ref ~ Strain, sam2[sam2$Strain!="Field - Camping Europe",])
+```
 
+#### Compare Wolbachia qPCR quantity by strain in Culex pipiens
+
+```{r warning=FALSE}
 sam3 <- na.omit(sam2)
 ggqqplot(sam3$qPCR_Ratio_Target_Ref)
 shapiro.test(sam3$qPCR_Ratio_Target_Ref)
@@ -749,8 +755,8 @@ p8 <- ggplot(na.omit(sam2), aes(x=Strain, y=qPCR_Ratio_Target_Ref, fill=Strain))
   geom_boxplot(alpha=0.6, outlier.shape = NA)+
   geom_jitter(position=position_jitter(0.5), aes(color=Strain), alpha=0.6) +
   theme_bw(base_size = 14)+
-  scale_fill_manual(values = c("blue", "grey", "red"))+
-  scale_color_manual(values = c("blue", "grey", "red"))+
+  scale_fill_manual(values = c("blue", "green", "red"))+
+  scale_color_manual(values = c("blue", "green", "red"))+
   labs(x="\nStrain", y="Ratio Target Ref (qPCR)", fill="Strain")+
   guides(colour=FALSE)+
   #stat_summary(fun = "median", geom = "point", shape = 23, size = 3, fill = "white")+
@@ -766,7 +772,11 @@ p8 <- ggplot(na.omit(sam2), aes(x=Strain, y=qPCR_Ratio_Target_Ref, fill=Strain))
   geom_text(data = means, aes(label = qPCR_Ratio_Target_Ref, y = qPCR_Ratio_Target_Ref + 0.4))
 
 p8
+```
 
+#### Correlation test between Wolbachia relative abundance and Wolbachia qPCR quantity
+
+```{r warning=FALSE}
 ggplot(na.omit(sam2), aes(x=Wolbachia, y=qPCR_Ratio_Target_Ref))+
   geom_line()
 
@@ -778,8 +788,9 @@ abline(lm(y ~ x), col = "red", lwd = 3)
 text(paste("Correlation:", round(cor(x, y), 2)), x = -0.6, y = 0.2)
 ```
 
+#### Save plots
 
-```{r fig.width=12, fig.height=10, warning=FALSE}
+```{r fig.height=10, fig.width=12, warning=FALSE}
 # panels
 p_group <- plot_grid(p2,
                      p3,
@@ -804,29 +815,27 @@ p_group2
 #ggarrange(p2, p3, p4, p5,nrow=2)
 
 # save
-setwd(path_plot)
-
-tiff("1Ec_NMDS_main.tiff", units="in", width=8, height=5, res=300)
+tiff("../../../../output/1_MED/1E/1Ec_NMDS_main.tiff", units="in", width=8, height=5, res=300)
 p6
 dev.off()
 
-tiff("1Ec_NMDS_supp.tiff", units="in", width=16, height=5, res=300)
+tiff("../../../../output/1_MED/1E/1Ec_NMDS_supp.tiff", units="in", width=16, height=5, res=300)
 p_group2
 dev.off()
 
-tiff("1Ec_MED_panels.tiff", units="in", width=14, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ec_MED_panels.tiff", units="in", width=14, height=10, res=300)
 p_group
 dev.off()
 
-png("1Ec_NMDS_main.png", units="in", width=8, height=5, res=300)
+png("../../../../output/1_MED/1E/1Ec_NMDS_main.png", units="in", width=8, height=5, res=300)
 p6
 dev.off()
 
-png("1Ec_NMDS_supp.png", units="in", width=16, height=5, res=300)
+png("../../../../output/1_MED/1E/1Ec_NMDS_supp.png", units="in", width=16, height=5, res=300)
 p_group2
 dev.off()
 
-png("1Ec_MED_panels.png", units="in", width=14, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ec_MED_panels.png", units="in", width=14, height=10, res=300)
 p_group
 dev.off()
 ```
@@ -834,7 +843,7 @@ dev.off()
 
 ### qPCR data
 
-```{r}
+```{r warning=FALSE}
 # all info
 p1 <- plot_ordination(ps_percent_whole, bray.culex_whole, color="qPCR_Infection", shape=NA) +
   labs(x="NMDS1", y = "NMDS2")+
@@ -863,9 +872,8 @@ p1+
 
 ## Effect of field
 
-```{r warning=FALSE, message=FALSE}
+```{r message=FALSE, warning=FALSE}
 require(vegan)
-setwd(path_xlsx)
 
 # Select pipiens whole from 
 ps_pipiens <- ps.filter %>% subset_samples(Species=="Culex pipiens")
@@ -875,143 +883,227 @@ ps_pipiens_whole_bosc_lavar <- subset_samples(ps_pipiens_whole, Strain!="Field -
 ps_pipiens_whole_camping_lavar <- subset_samples(ps_pipiens_whole, Strain!="Field - Bosc")
 ps_pipiens_whole_bosc_camping <- subset_samples(ps_pipiens_whole, Strain!="Laboratory - Lavar")
 
+
 # Adonis method
 
 ## Bosc / Lavar
+table(ps_pipiens_whole_bosc_lavar@sam_data$Species, ps_pipiens_whole_bosc_lavar@sam_data$Strain) %>% addmargins() -> contingency_1
+contingency_1
+
 adonis_field_bosc_lavar <- adonis(vegdist(t(otu_table(ps_pipiens_whole_bosc_lavar)), method = "bray") ~Field,
        data=as(sample_data(ps_pipiens_whole_bosc_lavar), "data.frame"), permutation = 9999)
+
+ss <- as(sample_data(ps_pipiens_whole_bosc_lavar), "data.frame")
+
+# betadisper uses the distance matrix to calculate the multivariate dispersions (variances; average distance to centroids)
+# we use group dispersions to perform an ANOVA test and we observe that the ANOVA's p-value is not significant meaning that group dispersions are homogenous ("Null hypothesis of no difference in dispersion between groups"
+
+anova(betadisper(vegdist(t(otu_table(ps_pipiens_whole_bosc_lavar)), method="bray"), ss$Field)) -> hetero_1
+hetero_1
 
 res_adonis1 <- adonis_field_bosc_lavar$aov.tab
 res_adonis1 <- fill_significance(res_adonis1,"Pr(>F)")
 
-
-# Calculate bray curtis distance matrix
-erie_bray <- phyloseq::distance(ps_pipiens_whole_bosc_camping, method = "bray")
-
-# make a data frame from the sample_data
-sampledf <- data.frame(sample_data(erie))
-
-# Adonis test
-adonis(erie_bray ~ Station, data = sampledf)
-
-
-
-
+hetero_1 <- fill_significance(hetero_1,"Pr(>F)")
 
 ## Camping / Lavar
+table(ps_pipiens_whole_camping_lavar@sam_data$Species, ps_pipiens_whole_camping_lavar@sam_data$Strain) %>% addmargins() -> contingency_2
+contingency_2
 adonis_field_camping_lavar <- adonis(vegdist(t(otu_table(ps_pipiens_whole_camping_lavar)), method = "bray") ~Field,
        data=as(sample_data(ps_pipiens_whole_camping_lavar), "data.frame"), permutation = 9999)
 
+ss <- as(sample_data(ps_pipiens_whole_camping_lavar), "data.frame")
+anova(betadisper(vegdist(t(otu_table(ps_pipiens_whole_camping_lavar)), method="bray"), ss$Field)) -> hetero_2
+hetero_2
+
 res_adonis2 <- adonis_field_camping_lavar$aov.tab
 res_adonis2 <- fill_significance(res_adonis2,"Pr(>F)")
+hetero_2 <- fill_significance(hetero_2,"Pr(>F)")
 
 ## Bosc / Camping
+table(ps_pipiens_whole_bosc_camping@sam_data$Species, ps_pipiens_whole_bosc_camping@sam_data$Strain) %>% addmargins() -> contingency_3
+contingency_3
 adonis_field_bosc_camping <- adonis(vegdist(t(otu_table(ps_pipiens_whole_bosc_camping)), method = "bray") ~Strain,
        data=as(sample_data(ps_pipiens_whole_bosc_camping), "data.frame"), permutation = 9999)
 
+ss <- as(sample_data(ps_pipiens_whole_bosc_camping), "data.frame")
+anova(betadisper(vegdist(t(otu_table(ps_pipiens_whole_bosc_camping)), method="bray"), ss$Strain)) -> hetero_3
+hetero_3
+
 res_adonis3 <- adonis_field_bosc_camping$aov.tab
 res_adonis3 <- fill_significance(res_adonis3,"Pr(>F)")
+hetero_3 <- fill_significance(hetero_3,"Pr(>F)")
+```
 
+```{r warning=FALSE}
 # Excel
-wb <- loadWorkbook("Supplementary_Table_2.xlsx")
-addWorksheet(wb, "NMDS")
+wb <- loadWorkbook("../../../../output/1_MED/1E/Supplementary_Table_2.xlsx")
+addWorksheet(wb, "NMDS and heteroscedasticity")
 
-writeData(wb, "NMDS", "Effect of lab (and Strain) in the Culex pipiens samples", startCol = 1, startRow = 25)
-writeData(wb, "NMDS", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 27)
-writeData(wb, "NMDS", "Lavar / Bosc:", startCol = 1, startRow = 29)
-writeData(wb, "NMDS", res_adonis1, startCol = 1, startRow = 30, rowNames=TRUE)
-writeData(wb, "NMDS", "Lavar / Camping Europe:", startCol = 1, startRow = 35)
-writeData(wb, "NMDS", res_adonis2, startCol = 1, startRow = 36, rowNames=TRUE)
-writeData(wb, "NMDS", "Bosc / Camping Europe:", startCol = 1, startRow = 41)
-writeData(wb, "NMDS", res_adonis3, startCol = 1, startRow = 42, rowNames=TRUE)
+writeData(wb, "NMDS and heteroscedasticity", "Effect of lab and location field in the Culex pipiens samples", startCol = 1, startRow = 25)
+writeData(wb, "NMDS and heteroscedasticity", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 27)
+writeData(wb, "NMDS and heteroscedasticity", "Lavar / Bosc:", startCol = 1, startRow = 29)
+writeData(wb, "NMDS and heteroscedasticity", res_adonis1, startCol = 1, startRow = 30, rowNames=TRUE)
+writeData(wb, "NMDS and heteroscedasticity", "Lavar / Camping Europe:", startCol = 1, startRow = 35)
+writeData(wb, "NMDS and heteroscedasticity", res_adonis2, startCol = 1, startRow = 36, rowNames=TRUE)
+writeData(wb, "NMDS and heteroscedasticity", "Bosc / Camping Europe:", startCol = 1, startRow = 41)
+writeData(wb, "NMDS and heteroscedasticity", res_adonis3, startCol = 1, startRow = 42, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Homoscedasticity (betadisper)", startCol = 10, startRow = 27)
+writeData(wb, "NMDS and heteroscedasticity", hetero_1, startCol = 10, startRow = 30, rowNames=TRUE)
+writeData(wb, "NMDS and heteroscedasticity", hetero_2, startCol = 10, startRow = 36, rowNames=TRUE)
+writeData(wb, "NMDS and heteroscedasticity", hetero_3, startCol = 10, startRow = 42, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Contingency table (sample size)", startCol = 18, startRow = 27)
+writeData(wb, "NMDS and heteroscedasticity", contingency_1, startCol = 18, startRow = 30, rowNames=TRUE)
+writeData(wb, "NMDS and heteroscedasticity", contingency_2, startCol = 18, startRow = 36, rowNames=TRUE)
+writeData(wb, "NMDS and heteroscedasticity", contingency_3, startCol = 18, startRow = 42, rowNames=TRUE)
 
 
-saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 ## Effect of tetracycline
-```{r warning=FALSE}
-setwd(path_xlsx)
-
+```{r message=FALSE, warning=FALSE}
 # Select quinque whole
 ps_quinque <- ps.filter %>% subset_samples(Species=="Culex quinquefasciatus")
 ps_quinque <- check_ps(ps_quinque)
 ps_quinque_whole <- ps_quinque %>% subset_samples(Organ=="Whole")
 
 # Adonis method
+table(ps_quinque_whole@sam_data$Species, ps_quinque_whole@sam_data$Strain) %>% addmargins() -> contingency_4
+contingency_4
 adonis_antibiotics <- adonis(vegdist(t(otu_table(ps_quinque_whole)), method = "bray") ~Field,
        data=as(sample_data(ps_quinque_whole), "data.frame"), permutation = 9999)
 
 adonis_antibiotics$aov.tab 
 
-res_adonis5 <- adonis_antibiotics$aov.tab %>% as.data.frame()
-res_adonis5 <- fill_significance(res_adonis3,"Pr(>F)")
+ss <- as(sample_data(ps_quinque_whole), "data.frame")
+anova(betadisper(vegdist(t(otu_table(ps_quinque_whole)), method="bray"), ss$Field)) -> hetero_4
+hetero_4
 
-writeData(wb, "NMDS", "Effect of tetracycline in the Culex quinquefasciatus samples", startCol = 1, startRow = 13)
-writeData(wb, "NMDS", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 15)
-writeData(wb, "NMDS", res_adonis3, startCol = 1, startRow = 17, rowNames=TRUE)
+res_adonis4 <- adonis_antibiotics$aov.tab %>% as.data.frame()
+res_adonis4 <- fill_significance(res_adonis4,"Pr(>F)")
+hetero_4 <- fill_significance(hetero_4, "Pr(>F)")
+```
 
-saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```{r warning=FALSE}
+writeData(wb, "NMDS and heteroscedasticity", "Effect of tetracycline in the Culex quinquefasciatus samples", startCol = 1, startRow = 13)
+writeData(wb, "NMDS and heteroscedasticity", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 15)
+writeData(wb, "NMDS and heteroscedasticity", res_adonis4, startCol = 1, startRow = 17, rowNames=TRUE)
+
+
+writeData(wb, "NMDS and heteroscedasticity", "Homoscedasticity (betadisper)", startCol = 10, startRow = 15)
+writeData(wb, "NMDS and heteroscedasticity", hetero_4, startCol = 10, startRow = 17, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Contingency table (sample size)", startCol = 18, startRow = 15)
+writeData(wb, "NMDS and heteroscedasticity", contingency_4, startCol = 18, startRow = 17, rowNames=TRUE)
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 ## Effect of species
-```{r warning=FALSE}
-setwd(path_xlsx)
-
+```{r message=FALSE, warning=FALSE}
 ps_whole_field <- ps.filter %>% subset_samples(Field=="Field")
 
+table(ps_whole_field@sam_data$Species, ps_whole_field@sam_data$Strain) %>% addmargins() -> contingency_5
+contingency_5
 adonis_whole_field <- adonis(vegdist(t(otu_table(ps_whole_field)), method = "bray") ~Species,
        data=as(sample_data(ps_whole_field), "data.frame"), permutation = 9999)
 
-res_adonis6 <- adonis_whole_field$aov.tab
-res_adonis6 <- fill_significance(res_adonis6,"Pr(>F)")
+ss <- as(sample_data(ps_whole_field), "data.frame")
+anova(betadisper(vegdist(t(otu_table(ps_whole_field)), method="bray"), ss$Strain)) -> hetero_5
+hetero_5
 
-writeData(wb, "NMDS", "Effect of species in the field samples", startCol = 1, startRow = 1)
-writeData(wb, "NMDS", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 3)
-writeData(wb, "NMDS", res_adonis6, startCol = 1, startRow = 5, rowNames=TRUE)
+res_adonis5 <- adonis_whole_field$aov.tab
+res_adonis5 <- fill_significance(res_adonis5,"Pr(>F)")
+hetero_5 <- fill_significance(hetero_5, "Pr(>F)")
+```
 
-saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```{r warning=FALSE}
+writeData(wb, "NMDS and heteroscedasticity", "Effect of species in the field samples", startCol = 1, startRow = 1)
+writeData(wb, "NMDS and heteroscedasticity", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 3)
+writeData(wb, "NMDS and heteroscedasticity", res_adonis5, startCol = 1, startRow = 5, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Homoscedasticity (betadisper)", startCol = 10, startRow = 3)
+writeData(wb, "NMDS and heteroscedasticity", hetero_5, startCol = 10, startRow = 5, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Contingency table (sample size)", startCol = 18, startRow = 3)
+writeData(wb, "NMDS and heteroscedasticity", contingency_5, startCol = 18, startRow = 5, rowNames=TRUE)
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 
 ## Effect of Wolbachia infection within Culex pipiens
-```{r warning=FALSE}
-setwd(path_xlsx)
-
+```{r message=FALSE, warning=FALSE}
 # HCA Wolbachia infection * Strain
+
+table(ps_pipiens_whole@sam_data$Strain, ps_pipiens_whole@sam_data$Infection) %>% addmargins() -> contingency_6
+contingency_6
 adonis_whole_infection <- adonis(vegdist(t(otu_table(ps_pipiens_whole)), method = "bray") ~Infection*Strain,
        data=as(sample_data(ps_pipiens_whole), "data.frame"), permutation = 9999)
 
-res_adonis7 <- adonis_whole_infection$aov.tab
-res_adonis7 <- fill_significance(res_adonis7,"Pr(>F)")
+ss <- as(sample_data(ps_pipiens_whole), "data.frame")
+anova(betadisper(vegdist(t(otu_table(ps_pipiens_whole)), method="bray"), ss$Strain)) -> hetero_6
 
-writeData(wb, "NMDS", "Effect of Wolbachia infection (HCA groups) and Strain in Culex pipiens", startCol = 1, startRow = 50)
-writeData(wb, "NMDS", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 52)
-writeData(wb, "NMDS", res_adonis7, startCol = 1, startRow = 54, rowNames=TRUE)
+res_adonis6 <- adonis_whole_infection$aov.tab
+res_adonis6 <- fill_significance(res_adonis6,"Pr(>F)")
+hetero_6 <- fill_significance(hetero_6, "Pr(>F)")
+```
 
-saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```{r warning=FALSE}
+writeData(wb, "NMDS and heteroscedasticity", "Effect of Wolbachia infection (HCA groups) and Strain in Culex pipiens", startCol = 1, startRow = 50)
+writeData(wb, "NMDS and heteroscedasticity", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 52)
+writeData(wb, "NMDS and heteroscedasticity", res_adonis6, startCol = 1, startRow = 54, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Homoscedasticity (betadisper)", startCol = 10, startRow = 52)
+writeData(wb, "NMDS and heteroscedasticity", hetero_6, startCol = 10, startRow = 54, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Contingency table (sample size)", startCol = 18, startRow = 52)
+writeData(wb, "NMDS and heteroscedasticity", contingency_6, startCol = 18, startRow = 54, rowNames=TRUE)
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 ## Effect of Wolbachia infection, qPCR values and Strain within Culex pipiens with qPCR values
-```{r warning=FALSE}
-setwd(path_xlsx)
-
+```{r message=FALSE, warning=FALSE}
 # HCA Wolbachia infection * Strain in Culex pipiens with a qPCR value
 ps_pipiens_whole_qpcr <- ps_pipiens_whole %>% subset_samples(qPCR_Ratio_Target_Ref >0)
 
+table(ps_pipiens_whole_qpcr@sam_data$Strain, ps_pipiens_whole_qpcr@sam_data$Infection) %>% addmargins() -> contingency_7
+contingency_7
 adonis_whole_infection2 <- adonis(vegdist(t(otu_table(ps_pipiens_whole_qpcr)), method = "bray") ~qPCR_Ratio_Target_Ref*Infection*Strain,
        data=as(sample_data(ps_pipiens_whole_qpcr), "data.frame"), permutation = 9999)
 
-res_adonis8 <- adonis_whole_infection2$aov.tab
-res_adonis8 <- fill_significance(res_adonis8,"Pr(>F)")
+ss <- as(sample_data(ps_pipiens_whole_qpcr), "data.frame")
+anova(betadisper(vegdist(t(otu_table(ps_pipiens_whole_qpcr)), method="bray"), ss$Strain)) -> hetero_7
+hetero_7
 
-writeData(wb, "NMDS", "Effect of Wolbachia infection (HCA groups), qPCR values and Strain in Culex pipiens with qPCR values", startCol = 1, startRow = 63)
-writeData(wb, "NMDS", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 65)
-writeData(wb, "NMDS", res_adonis8, startCol = 1, startRow = 67, rowNames=TRUE)
+res_adonis7 <- adonis_whole_infection2$aov.tab
+res_adonis7 <- fill_significance(res_adonis7,"Pr(>F)")
+hetero_7 <- fill_significance(hetero_7, "Pr(>F)")
+```
 
-saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+```{r warning=FALSE}
+writeData(wb, "NMDS and heteroscedasticity", "Effect of Wolbachia infection (HCA groups), qPCR values and strain in Culex pipiens", startCol = 1, startRow = 63)
+writeData(wb, "NMDS and heteroscedasticity", "ADONIS (Analysis of variance using distance matrices):", startCol = 1, startRow = 65)
+writeData(wb, "NMDS and heteroscedasticity", res_adonis7, startCol = 1, startRow = 67, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Homoscedasticity (betadisper)", startCol = 10, startRow = 65)
+writeData(wb, "NMDS and heteroscedasticity", hetero_7, startCol = 10, startRow = 67, rowNames=TRUE)
+
+writeData(wb, "NMDS and heteroscedasticity", "Contingency table (sample size)", startCol = 18, startRow = 65)
+writeData(wb, "NMDS and heteroscedasticity", contingency_7, startCol = 18, startRow = 67, rowNames=TRUE)
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 
-
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
 

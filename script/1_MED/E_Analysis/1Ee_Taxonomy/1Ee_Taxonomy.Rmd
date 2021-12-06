@@ -21,7 +21,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, warning=FALSE, message=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
@@ -31,12 +30,11 @@ invisible(lapply(packages, require, character.only = TRUE))
 
 ## Load phyloseq object after decontam
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ```
 
-## Data for plot
-```{r}
+## Setting plot display
+```{r warning=FALSE}
 # select whole
 ps.filter.whole <- subset_samples(ps.filter, Organ=="Whole")
 ps.filter.whole <- prune_taxa(taxa_sums(ps.filter.whole) >= 1, ps.filter.whole)
@@ -110,12 +108,11 @@ col_o <- c("N0711.Wolbachia"="#FEB24C",
 guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 10, face = "italic", colour = "Black", angle = 0)))
 ```
 
-# Taxonomic structure
+# Taxonomic structure plots
 
 ## Whole (the 15 most abundant nodes)
 ```{r fig.height = 12, fig.width=14}
 # data pour plot
-#data_for_plot <- taxo_data(ps.filter.whole, method = "abundance", top=15, other=FALSE)
 data_for_plot <- taxo_data (ps.filter.whole, top=15)
 paste0("\n15 MOST ABUNDANT GENUS: \n") %>% cat()
 paste0("\"", levels(data_for_plot$Name), "\",\n") %>% cat()
@@ -145,37 +142,38 @@ levels(data_for_plot$Species.x)= c("Aedes aegypti"=make.italic("Aedes aegypti"),
                "Culex pipiens"=make.italic("Culex pipiens"),
                "Culex quinquefasciatus"=make.italic("Culex quinquefasciatus"))
 
-# levels(data_for_plot$Location) <- c("Bosc", "Camping~Europe", "Guadeloupe", "Lavar~(lab)", expression(paste(italic("Wolbachia"), "- (Slab TC)")))
-
 levels(data_for_plot$Strain) <- c("Field - Bosc", 
                                   "Field~-~Camping~Europe", 
                                   "Field~-~Guadeloupe", 
                                   "Laboratory~-~Lavar", 
                                   expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), "-)")))
 
-p <- ggplot(data_for_plot, aes(x = Sample, y = Relative_Abundance, fill = Name, species=Species.x, organ=Organ, strain=Strain))+ 
+p <- ggplot(data_for_plot, aes(x = Sample, y = Relative_Abundance, fill = Name, species=Species.x, organ=Organ, Strain=Strain))+ 
   geom_bar(position = "stack", stat = "identity")+
   scale_fill_manual(values = col_w)+
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  ggtitle("") + 
+  theme(axis.text.x = element_text(angle = 90, size=18, hjust=1, vjust=0.5)) +
+  ggtitle("")+
   guide_italics+
-  theme(legend.title = element_text(size = 18), 
+  theme(legend.title = element_text(size = 20),
         legend.position="bottom",
-        panel.spacing.y=unit(1, "lines"), 
+        legend.text = element_text(size=14),
+        panel.spacing.y=unit(1, "lines"),
         panel.spacing.x=unit(0.8, "lines"),
         panel.spacing=unit(0,"lines"),
         strip.background=element_rect(color="grey30", fill="grey90"),
+        strip.text.x = element_text(size = 18),
         panel.border=element_rect(color="grey90"),
-        axis.ticks.x=element_blank()) +
- facet_wrap(~Species.x+Strain+Organ, scales = "free", ncol=3, labeller=label_parsed)+
-  labs(x="Sample", y="Relative abundance", fill="Oligotype (MED)")
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_text(size=18)) +
+  facet_wrap(~Species.x+Strain+Organ, scales = "free", ncol=3, labeller=label_parsed)+
+  labs(x="Sample", y="Relative abundance", fill="Oligotype / MED node")
 
 p
 ```
 
 ## Ovary (the 15 most abundant nodes)
-```{r fig.height = 12, fig.width=14}
+```{r fig.height = 12, fig.width=18}
 # data pour plot
 #data_for_plot2 <- taxo_data(ps.filter.ovary, method = "abundance", top=15, other=FALSE)
 data_for_plot2 <- taxo_data(ps.filter.ovary, top=15)
@@ -212,44 +210,78 @@ levels(data_for_plot2$Strain) <- c("Field - Bosc",
                                   "Laboratory~-~Lavar", 
                                   expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), "-)")))
 
-p2 <- ggplot(data_for_plot2, aes(x = Sample, y = Relative_Abundance, fill = Name, species=Species.x, organ=Organ, strain=Strain))+ 
+p2 <- ggplot(data_for_plot2, aes(x = Sample, y = Relative_Abundance, fill = Name, species=Species.x, organ=Organ, Strain=Strain))+ 
   geom_bar(position = "stack", stat = "identity")+
   scale_fill_manual(values = col_o)+
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  ggtitle("") + 
+  theme(axis.text.x = element_text(angle = 90, size=18, hjust=1, vjust=0.5)) +
+  ggtitle("")+
   guide_italics+
-  theme(legend.title = element_text(size = 18), 
+  theme(legend.title = element_text(size = 20),
         legend.position="bottom",
-        panel.spacing.y=unit(1, "lines"), 
+        legend.text = element_text(size=14),
+        panel.spacing.y=unit(1, "lines"),
         panel.spacing.x=unit(0.8, "lines"),
         panel.spacing=unit(0,"lines"),
         strip.background=element_rect(color="grey30", fill="grey90"),
+        strip.text.x = element_text(size = 18),
         panel.border=element_rect(color="grey90"),
-        axis.ticks.x=element_blank()) +
- facet_wrap(~Species.x+Strain+Organ, scales = "free", ncol=3, labeller=label_parsed)+
-  labs(x="Sample", y="Relative abundance", fill="Oligotype (MED)")
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_text(size=18)) +
+  facet_wrap(~Species.x+Strain+Organ, scales = "free", ncol=3, labeller=label_parsed)+
+  labs(x="Sample", y="Relative abundance", fill="Oligotype / MED node")
 
 p2
 ```
 
 
-## Save taxonomic plot
+
+# Save plots
 ```{r warning=FALSE}
-setwd(path_plot)
-tiff("1Ee_MED_15_taxonomic_whole.tiff", units="in", width=14, height=12, res=300)
+png("../../../../output/1_MED/1E/1Ee_MED_15_taxonomic_whole.png", units="in", width=16, height=12, res=300)
 p
 dev.off()
 
-tiff("1Ee_MED_15_taxonomic_ovary.tiff", units="in", width=14, height=12, res=300)
+png("../../../../output/1_MED/1E/1Ee_MED_15_taxonomic_ovary.png", units="in", width=14, height=12, res=300)
 p2
 dev.off()
 
-png("1Ee_MED_15_taxonomic_whole.png", units="in", width=14, height=12, res=300)
+tiff("../../../../output/1_MED/1E/1Ee_MED_15_taxonomic_whole.png", units="in", width=16, height=12, res=300)
 p
 dev.off()
 
-png("1Ee_MED_15_taxonomic_ovary.png", units="in", width=14, height=12, res=300)
+tiff("../../../../output/1_MED/1E/1Ee_MED_15_taxonomic_ovary.png", units="in", width=14, height=12, res=300)
 p2
 dev.off()
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
+
+
+```{r eval=FALSE, include=FALSE}
+## % of Wolbachia in Aedes aegypti samples
+# ps.filter.whole.aedes <- ps.filter.whole %>% subset_samples(Species=="Aedes aegypti")
+#   ps_global <- transform_sample_counts(ps.filter.whole.aedes, function(x) x / sum(x))
+# 
+#   # melt phyloseq object
+#   data_for_plot <- psmelt(ps_global)
+# 
+#   # add a column with custom name for oligotypes
+#   data_for_plot$Name <- paste(data_for_plot$OTU,data_for_plot$Genus, sep=".")
+# 
+#   # convert Name column to factor
+#   data_for_plot$Name <- as.factor(data_for_plot$Name)
+# 
+#   # replace Abundance column name to "Relative_Abundance"
+#   colnames(data_for_plot)[colnames(data_for_plot) %in% "Abundance"] <- "Relative_Abundance"
+# 
+#   # replace name of Species column by "Species.x" to avoid duplication
+#   colnames(data_for_plot)[colnames(data_for_plot) %in% "sample_Species"] <- "Species.x"
+# 
+#   data2 <- data_for_plot %>% select(c(Sample, Relative_Abundance, Genus))
+#   test2 <- reshape(data2, idvar = c("Genus"), timevar = "Sample", direction="wide") %>% data.frame()
+#   values <- test2[5,c(2:10)] %>% sort()
 ```

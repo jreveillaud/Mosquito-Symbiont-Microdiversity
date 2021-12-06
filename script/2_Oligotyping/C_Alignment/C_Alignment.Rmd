@@ -1,0 +1,80 @@
+---
+title: "Alignment"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load packages, paths, functions
+```{r message=FALSE, warning=FALSE}
+# load main packages, paths and custom functions
+source("../../source/main_packages.R")
+source("../../source/functions.R")
+
+# load supplementary packages
+packages <- c("Biostrings", "msa")
+invisible(lapply(packages, require, character.only = TRUE))
+
+# create output folders if needed
+if (!dir.exists("../../../output/2_Oligotyping/2C")) {dir.create("../../../output/2_Oligotyping/2C")}
+```
+
+# Make alignment
+```{r warning=FALSE}
+# Wolbachia
+make_alignment(path_input="../../../output/2_Oligotyping/2B", 
+               path_output="../../../output/2_Oligotyping/2C", 
+               genus="wolbachia", 
+               oligo_zoom=c(190, 280))
+
+# Asaia
+make_alignment(path_input="../../../output/2_Oligotyping/2B", 
+               path_output="../../../output/2_Oligotyping/2C", 
+               genus="asaia", 
+               oligo_zoom=c(200, 270))
+
+# Chryseobacterium
+make_alignment(path_input="../../../output/2_Oligotyping/2B", 
+               path_output="../../../output/2_Oligotyping/2C", 
+               genus="chryseobacterium",
+               oligo_zoom=c(85,385))
+
+# Elizabethkingia
+make_alignment(path_input="../../../output/2_Oligotyping/2B", 
+               path_output="../../../output/2_Oligotyping/2C", 
+               genus="elizabethkingia",
+               oligo_zoom=c(250,270))
+
+# Erwinia
+make_alignment(path_input="../../../output/2_Oligotyping/2B", 
+               path_output="../../../output/2_Oligotyping/2C", 
+               genus="erwinia",
+               oligo_zoom=c(90,120))
+
+# Legionella
+make_alignment(path_input="../../../output/2_Oligotyping/2B", 
+               path_output="../../../output/2_Oligotyping/2C", 
+               genus="legionella", 
+               oligo_zoom=c(60,270))
+
+# Serratia
+make_alignment(path_input="../../../output/2_Oligotyping/2B", 
+               path_output="../../../output/2_Oligotyping/2C", 
+               genus="serratia", 
+               oligo_zoom=c(90,120))
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```

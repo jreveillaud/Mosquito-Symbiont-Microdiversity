@@ -1,0 +1,8 @@
+sample	r1	r2
+Culex_O03	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O03-QUALITY_PASSED_R1.fastq.gz	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O03-QUALITY_PASSED_R2.fastq.gz
+Culex_O07	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O07-QUALITY_PASSED_R1.fastq.gz	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O07-QUALITY_PASSED_R2.fastq.gz
+Culex_O11	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O11-QUALITY_PASSED_R1.fastq.gz	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O11-QUALITY_PASSED_R2.fastq.gz
+Culex_O12	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O12-QUALITY_PASSED_R1.fastq.gz	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_O12-QUALITY_PASSED_R2.fastq.gz
+Culex_Istanbul	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_Istanbul-QUALITY_PASSED_R1.fastq.gz	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_Istanbul-QUALITY_PASSED_R2.fastq.gz
+Culex_Tunis	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_Tunis-QUALITY_PASSED_R1.fastq.gz	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_Tunis-QUALITY_PASSED_R2.fastq.gz
+Culex_Harash	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_Harash-QUALITY_PASSED_R1.fastq.gz	/Volumes/MY_PASSPORT/MAGS_25_11_21/Ovaries_Raw/01QC_from_cluster/Culex_Harash-QUALITY_PASSED_R2.fastq.gz

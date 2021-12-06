@@ -1,0 +1,216 @@
+---
+title: "Run MED"
+author: "Hans Schrieke and Julie Reveillaud"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    lightbox: true
+    gallery: false
+    fig_caption: true
+    highlight: tango
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preparation
+
+## Paths and libraries setting
+
+```{r message=FALSE, warning=FALSE}
+# load main packages, paths and custom functions
+source("../../source/main_packages.R")
+source("../../source/functions.R")
+
+# load supplementary packages
+packages <- c("Biostrings", "seqinr")
+invisible(lapply(packages, require, character.only = TRUE))
+
+# create output folders if needed
+if (!dir.exists("../../../output/2_Oligotyping")) {dir.create("../../../output/2_Oligotyping")}
+if (!dir.exists("../../../output/2_Oligotyping/2A")) {dir.create("../../../output/2_Oligotyping/2A")}
+if (!dir.exists("../../../output/2_Oligotyping/2A/Wolbachia")) {dir.create("../../../output/2_Oligotyping/2A/Wolbachia")}
+if (!dir.exists("../../../output/2_Oligotyping/2A/Asaia")) {dir.create("../../../output/2_Oligotyping/2A/Asaia")}
+if (!dir.exists("../../../output/2_Oligotyping/2A/Chryseobacterium")) {dir.create("../../../output/2_Oligotyping/2A/Chryseobacterium")}
+if (!dir.exists("../../../output/2_Oligotyping/2A/Elizabethkingia")) {dir.create("../../../output/2_Oligotyping/2A/Elizabethkingia")}
+if (!dir.exists("../../../output/2_Oligotyping/2A/Erwinia")) {dir.create("../../../output/2_Oligotyping/2A/Erwinia")}
+if (!dir.exists("../../../output/2_Oligotyping/2A/Legionella")) {dir.create("../../../output/2_Oligotyping/2A/Legionella")}
+if (!dir.exists("../../../output/2_Oligotyping/2A/Serratia")) {dir.create("../../../output/2_Oligotyping/2A/Serratia")}
+
+# paths
+path_tsv <- "../../../output/1_MED/1B"
+path_med <- "../../../output/1_MED/1A/1A_MED_sequences-m0.10-A0-M0-d4"
+path_metadata <- "../../../metadata"
+path_oligo <- "../../../output/2_Oligotyping/2A"
+```
+
+## Create fasta file for each Genus
+
+To run oligotyping, we need to create fasta files for each Genus we want analyze. 
+
+### Wolbachia
+```{r warning=FALSE}
+# Wolbachia
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES/"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata.csv",
+                             genus="Wolbachia", 
+                             path_output=paste0(path_oligo, "/wolbachia/")
+                             )
+```
+
+
+### Asaia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES/"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata.csv",
+                             genus="Asaia", 
+                             path_output=paste0(path_oligo, "/Asaia/")
+                             )
+```
+
+### Chryseobacterium
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES/"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata.csv",
+                             genus="Chryseobacterium", 
+                             path_output=paste0(path_oligo, "/Chryseobacterium/")
+                             )
+```
+
+### Elizabethkingia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES/"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata.csv",
+                             genus="Elizabethkingia", 
+                             path_output=paste0(path_oligo, "/Elizabethkingia/")
+                             )
+```
+
+### Erwinia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES/"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata.csv",
+                             genus="Erwinia", 
+                             path_output=paste0(path_oligo, "/Erwinia/")
+                             )
+```
+
+### Legionella
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES/"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata.csv",
+                             genus="Legionella", 
+                             path_output=paste0(path_oligo, "/Legionella/")
+                             )
+```
+
+### Serratia
+```{r warning=FALSE}
+prepare_data_for_oligotyping(path_RDATA=path_tsv, 
+                             path_MED=path_med, 
+                             path_NODES=paste0(path_med, "/NODES/"), 
+                             path_metadata=path_metadata,
+                             metadata="/metadata.csv",
+                             genus="Serratia", 
+                             path_output=paste0(path_oligo, "/Serratia/")
+                             )
+```
+
+
+# Run Oligotyping
+
+To run oligotyping, we used a docker container where oligotyping v2.1 were installed. To install this container, you can follow this great tutorial : https://merenlab.org/2014/09/02/virtualbox/
+
+```{r engine='bash', attr.output='style="max-height: 300px;"'}
+# variable for path
+OUTPUT="../../../output"
+path_data="$OUTPUT/2_Oligotyping/2A"
+
+# do oligotyping for each genus
+for genus in Wolbachia Asaia Chryseobacterium Elizabethkingia Legionella Erwinia Serratia
+
+do
+  
+  # move in the good folder
+  if [ $genus == Wolbachia ] 
+  then
+  cd $path_data/$genus
+  else
+  cd ../$genus
+  fi
+  
+  # set the number of component used for oligotyping depending on genus
+  if [ $genus == Wolbachia ]
+  then
+  paramC=2
+  elif [ $genus == Asaia ]
+  then
+  paramC=5
+    elif [ $genus == Chryseobacterium ]
+  then
+  paramC=3
+    elif [ $genus == Elizabethkingia ]
+  then
+  paramC=1
+    elif [ $genus == Legionella ]
+  then
+  paramC=4
+    elif [ $genus == Erwinia ]
+  then
+  paramC=8
+    elif [ $genus == Serratia ]
+  then
+  paramC=1
+  fi
+  
+  # run docker session
+  docker run -d --name oligotyping --rm -v `pwd`:`pwd` -w `pwd` -it meren/oligotyping:2.1
+
+  # check files 
+  docker exec oligotyping ls 
+
+  # get info from fasta 
+  docker exec oligotyping o-get-sample-info-from-fasta 2A_oligotyping_${genus}_sequences.fasta
+
+  # fill gaps
+  docker exec oligotyping o-pad-with-gaps 2A_oligotyping_${genus}_sequences.fasta
+
+  # get info from fasta to check if all is good after the fill gaps step
+  docker exec oligotyping o-get-sample-info-from-fasta 2A_oligotyping_${genus}_sequences.fasta-PADDED-WITH-GAPS
+
+  # Shannon entropy
+  docker exec oligotyping entropy-analysis 2A_oligotyping_${genus}_sequences.fasta-PADDED-WITH-GAPS
+
+  # run oligotyping
+  docker exec oligotyping oligotype 2A_oligotyping_${genus}_sequences.fasta-PADDED-WITH-GAPS 2A_oligotyping_${genus}_sequences.fasta-PADDED-WITH-GAPS-ENTROPY -c $paramC -M 10
+
+  # kill docker container
+  docker container kill oligotyping
+  
+done
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```

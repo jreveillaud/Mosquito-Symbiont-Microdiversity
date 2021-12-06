@@ -19,7 +19,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r message=FALSE, warning=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
@@ -34,10 +33,10 @@ invisible(lapply(packages, require, character.only = TRUE))
 ### Seqtab
 ```{r warning=FALSE}
 # move to oligotyping directory
-setwd(paste0(path_oligo,"/asaia/oligotyping_Asaia_sequences-c5-s1-a0.0-A0-M10"))
+path_asaia <- "../../../../output/2_Oligotyping/2A/Asaia/2A_oligotyping_Asaia_sequences-c5-s1-a0.0-A0-M10"
 
 # load the matrix count table
-matrix_count <- read.table("MATRIX-COUNT.txt", header = TRUE) %>% t()
+matrix_count <- read.table(paste0(path_asaia, "/MATRIX-COUNT.txt"), header = TRUE) %>% t()
 
 # arrange it
 colnames(matrix_count) <- matrix_count[1,]
@@ -52,11 +51,8 @@ matrix_count %>%
 
 ### Taxonomy
 ```{r warning=FALSE}
-# move to oligotyping directory
-setwd(paste0(path_oligo,"/asaia/oligotyping_Asaia_sequences-c5-s1-a0.0-A0-M10"))
-
 # load the fasta table
-fasta <- readDNAStringSet("OLIGO-REPRESENTATIVES.fasta")
+fasta <- readDNAStringSet(paste0(path_asaia, "/OLIGO-REPRESENTATIVES.fasta"))
 
 # arrange it
 fasta <- fasta %>% as.data.frame()
@@ -75,11 +71,8 @@ fasta %>%
 ```{r warning=FALSE}
 # Reference file 
 
-## move to tsv directory
-setwd(path_tsv)
-
 ## load the reference table
-ref_oligo_med2 <- read.table("2B_REF_info_asaia.tsv", sep="\t", header = TRUE)
+ref_oligo_med2 <- read.table("../../../../output/2_Oligotyping/2B/2B_REF_info_asaia.tsv", sep="\t", header = TRUE)
 
 ## select only the 5 oligotypes of Asaia
 ref_oligo_med2 <- ref_oligo_med2[!is.na(ref_oligo_med2$oligotype),]
@@ -130,7 +123,7 @@ fasta2 %>%
 ```
 ### Metadata
 ```{r}
-metadata <- read.csv(paste0(path_metadata,"/metadata_22_06_21.csv"), sep=";")
+metadata <- read.csv("../../../../metadata/metadata.csv", sep=";")
 rownames(metadata) <- metadata$Sample
 ```
 
@@ -161,8 +154,7 @@ ps
 
 #### Load ps with all samples (for final plot)
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ps.filter <- check_ps(ps.filter)
 ```
 
@@ -173,18 +165,18 @@ guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 16
 # add read depth in sample table of phyloseq object
 sample_data(ps.filter)$Read_depth <- sample_sums(ps.filter)
 
-# select Wolbachia
+# select Asaia
 ps.asaia <- ps.filter %>% subset_taxa(Genus=="Asaia")
 
-# add read depth of Wolbachia
+# add read depth of Asaia
 sample_data(ps.filter)$Read_asaia <- sample_sums(ps.asaia)
 sample_data(ps.filter) %>% colnames()
 sample_data(ps.asaia) %>% colnames()
 
-# add percent of Wolbachia
+# add percent of Asaia
 sample_data(ps.filter)$Percent_asaia <- sample_data(ps.filter)$Read_asaia / sample_data(ps.filter)$Read_depth
 
-# round the percent of Wolbachia at 2 decimals
+# round the percent of Asaia at 2 decimals
 sample_data(ps.filter)$Percent_asaia <- sample_data(ps.filter)$Percent_asaia %>% round(2)
 
 # extract metadata table
@@ -203,6 +195,105 @@ new.metadata %>%
 # replace metadata in the created phyloseq object
 sample_data(ps) <- sample_data(new.metadata)
 ```
+
+#### Percent by oligotype
+```{r}
+# Guadeloupe 
+
+## Oligotype TGCGA
+
+oligo_TGCGA <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain=="Field - Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_TGCGA (33) | size:699320 / node_N1147 (33) | size:651167")
+
+oligo_TGCGA <- prune_taxa(taxa_sums(oligo_TGCGA) >= 1, oligo_TGCGA)
+oligo_TGCGA <- prune_samples(sample_sums(oligo_TGCGA) >= 1, oligo_TGCGA)
+  
+oligo_TGCGA %>% taxa_sums() -> sum_oligo_1
+oligo_TGCGA@sam_data$Read_depth %>% sum() -> sum_total_1
+
+sum_oligo_1 / sum_total_1 *100 # 35.91%
+sum_oligo_1 / 6452623 *100 # 10.83%
+
+## Oligotype CATAG
+
+oligo_CATAG <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain=="Field - Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_CATAG (16) | size:661010 / node_N1156 (40) | size:622340")
+
+oligo_CATAG <- prune_taxa(taxa_sums(oligo_CATAG) >= 1, oligo_CATAG)
+oligo_CATAG <- prune_samples(sample_sums(oligo_CATAG) >= 1, oligo_CATAG)
+
+oligo_CATAG %>% taxa_sums() -> sum_oligo_2
+oligo_CATAG@sam_data$Read_depth %>% sum() -> sum_total_2
+
+sum_oligo_2 / sum_total_2 *100 # 33.94%
+sum_oligo_2 / 6452623 *100 # 10.24%
+
+## Oligotype TACGA
+
+oligo_TACGA <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain=="Field - Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_TACGA (68) | size:376837 / node_N0939 (68) | size:364329")
+
+oligo_TACGA <- prune_taxa(taxa_sums(oligo_TACGA) >= 1, oligo_TACGA)
+oligo_TACGA <- prune_samples(sample_sums(oligo_TACGA) >= 1, oligo_TACGA)
+  
+oligo_TACGA %>% taxa_sums() -> sum_oligo_3 
+oligo_TACGA@sam_data$Read_depth %>% sum() -> sum_total_3 
+
+sum_oligo_3 / sum_total_3 *100 # 15.02%
+sum_oligo_3 / 6452623 *100 # 4.53%
+
+# France
+
+## Oligotype TGCGA
+
+oligo_TGCGA <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Field - Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_TGCGA (33) | size:699320 / node_N1147 (33) | size:651167")
+
+oligo_TGCGA <- prune_taxa(taxa_sums(oligo_TGCGA) >= 1, oligo_TGCGA)
+oligo_TGCGA <- prune_samples(sample_sums(oligo_TGCGA) >= 1, oligo_TGCGA)
+  
+oligo_TGCGA %>% taxa_sums() -> sum_oligo_1
+oligo_TGCGA@sam_data$Read_depth %>% sum() -> sum_total_1
+
+sum_oligo_1 / sum_total_1 *100 # 0.024%
+sum_oligo_1 / 6452623 *100 # 0.0019%
+
+## Oligotype CATAG
+
+oligo_CATAG <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Field - Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_CATAG (16) | size:661010 / node_N1156 (40) | size:622340")
+
+oligo_CATAG <- prune_taxa(taxa_sums(oligo_CATAG) >= 1, oligo_CATAG)
+oligo_CATAG <- prune_samples(sample_sums(oligo_CATAG) >= 1, oligo_CATAG)
+
+oligo_CATAG %>% taxa_sums() -> sum_oligo_2
+oligo_CATAG@sam_data$Read_depth %>% sum() -> sum_total_2
+
+sum_oligo_2 / sum_total_2 *100 # 0.003%
+sum_oligo_2 / 6452623 *100 # 1.5e-05 %
+
+## Oligotype TACGA
+
+oligo_TACGA <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Field - Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_TACGA (68) | size:376837 / node_N0939 (68) | size:364329")
+
+oligo_TACGA <- prune_taxa(taxa_sums(oligo_TACGA) >= 1, oligo_TACGA)
+oligo_TACGA <- prune_samples(sample_sums(oligo_TACGA) >= 1, oligo_TACGA)
+  
+oligo_TACGA %>% taxa_sums() -> sum_oligo_3 
+oligo_TACGA@sam_data$Read_depth %>% sum() -> sum_total_3 
+
+sum_oligo_3 / sum_total_3 *100 # 8.01%
+sum_oligo_3 / 6452623 *100 # 1.3%
+
+```
+
 
 # Taxonomic structure
 
@@ -343,7 +434,7 @@ levels(data_for_plot2$Species)= c("Aedes aegypti"=make.italic("Aedes aegypti"),
                "Culex pipiens"=make.italic("Culex pipiens"),
                "Culex quinquefasciatus"=make.italic("Culex quinquefasciatus"))
 
-levels(data_for_plot2$Strain) <- c("Bosc", "Camping~Europe", "Guadeloupe", "Lavar~(lab)", expression(paste(italic("Wolbachia"), "- (Slab TC)")))
+levels(data_for_plot2$Strain) <- c("Bosc", "Camping~Europe", "Guadeloupe", "Lavar~(lab)", expression(paste(italic("Asaia"), "- (Slab TC)")))
 
 #data_for_plot2 <- data_for_plot2 %>% na.omit()
 
@@ -402,7 +493,7 @@ levels(data_for_plot3$Species)= c("Aedes aegypti"=make.italic("Aedes aegypti"),
                "Culex pipiens"=make.italic("Culex pipiens"),
                "Culex quinquefasciatus"=make.italic("Culex quinquefasciatus"))
 
-#levels(data_for_plot3$Strain) <- c("Bosc", "Camping~Europe", "Guadeloupe", "Lavar~(lab)", expression(paste(italic("Wolbachia"), "- (Slab TC)")))
+#levels(data_for_plot3$Strain) <- c("Bosc", "Camping~Europe", "Guadeloupe", "Lavar~(lab)", expression(paste(italic("Asaia"), "- (Slab TC)")))
 levels(data_for_plot3$Strain) <- c("Bosc", "Guadeloupe", "Lavar~(lab)")
 
 #data_for_plot3 <- data_for_plot3 %>% na.omit()
@@ -450,54 +541,50 @@ p_taxo
 ## Save taxonomic plot
 
 ```{r warning=FALSE}
-setwd(path_plot)
-
-tiff("2Db_OLIGO_counts_asaia.tiff", units="in", width=20, height=18, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Db_OLIGO_counts_asaia.tiff", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-tiff("2Db_OLIGO_taxonomic_asaia_whole.tiff", units="in", width=16, height=12, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Db_OLIGO_taxonomic_asaia_whole.tiff", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-tiff("2Db_OLIGO_taxonomic_asaia_ovary.tiff", units="in", width=18, height=14, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Db_OLIGO_taxonomic_asaia_ovary.tiff", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-tiff("2Db_OLIGO_taxonomic_asaia.tiff", units="in", width=18, height=16, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Db_OLIGO_taxonomic_asaia.tiff", units="in", width=18, height=16, res=300)
 p_taxo
 dev.off()
 
-png("2Db_OLIGO_counts_asaia_big.png", units="in", width=20, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Db_OLIGO_counts_asaia_big.png", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-png("2Db_OLIGO_counts_asaia_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Db_OLIGO_counts_asaia_small.png", units="in", width=18, height=14, res=300)
 p_counts
 dev.off()
 
-png("2Db_OLIGO_taxonomic_asaia_whole.png", units="in", width=16, height=12, res=300)
+png("../../../../output/2_Oligotyping/2D/2Db_OLIGO_taxonomic_asaia_whole.png", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-png("2Db_OLIGO_taxonomic_asaia_ovary.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Db_OLIGO_taxonomic_asaia_ovary.png", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-png("2Db_OLIGO_taxonomic_asaia_big.png", units="in", width=18, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Db_OLIGO_taxonomic_asaia_big.png", units="in", width=18, height=18, res=300)
 p_taxo
 dev.off()
 
-png("2Db_OLIGO_taxonomic_asaia_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Db_OLIGO_taxonomic_asaia_small.png", units="in", width=18, height=14, res=300)
 p_taxo
 dev.off()
 ```
 
 # Make main plot
 ```{r warning=FALSE, fig.height = 12, fig.width=18}
-setwd(paste0(path_oligo,"/asaia/oligotyping_Asaia_sequences-c5-s1-a0.0-A0-M10/HTML-OUTPUT"))
-
-img <- magick::image_read("entropy.png")
+img <- magick::image_read(paste0(path_asaia, "/HTML-OUTPUT/entropy.png"))
 p_entropy <- magick::image_ggplot(img, interpolate = TRUE)
 p_entropy+ theme(plot.margin = unit(c(-7,-2.5,-7,-0.5), "cm"))
 p_entropy+ theme(plot.margin=unit(c(-7,-2,-12,-5), "mm"))
@@ -523,18 +610,19 @@ t_plot <- plot_grid(aligned,
 t_plot
 
 
-setwd(path_plot)
-
-tiff("2Db_OLIGO_main_asaia.tiff", width=36, height=36, res=300, units="in")
+tiff("../../../../output/2_Oligotyping/2D/2Db_OLIGO_main_asaia.tiff", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 
-png("2Db_OLIGO_main_asaia.png", width=36, height=36, res=300, units="in")
+png("../../../../output/2_Oligotyping/2D/2Db_OLIGO_main_asaia.png", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 ```
 
-
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
 
 
 

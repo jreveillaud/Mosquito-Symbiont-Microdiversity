@@ -23,7 +23,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, warning=FALSE, message=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Florentin CONSTANCIAS's script
@@ -32,16 +31,10 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 
 ## Load phyloseq objects before and after decontam
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps <- readRDS("MED_phyloseq.rds")
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+#ps <- readRDS("../../../../output/rdata/MED_phyloseq.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ```
 
-## Change factors format for organ and species
-```{r}
-change_organ(ps.filter)
-change_species(ps.filter)
-```
 
 # Heatmap
 
@@ -76,6 +69,8 @@ p1
 
 ## Wolbachia nodes
 ```{r fig.height = 10, fig.width=22}
+physeq@tax_table[1, "Strain"] <- NA
+
 physeq %>%
  transform_sample_counts(function(x) x/sum(x) *100) %>% 
  subset_taxa(Genus == "Wolbachia") %>%
@@ -233,8 +228,7 @@ p8
 
 ```{r warning=FALSE, fig.height = 10, fig.width=22}
 # import phyloseq object before decontam
-setwd(path_rdata)
-ps <- readRDS("MED_phyloseq.rds")
+ps <- readRDS("../../../../output/1_MED/1C/1C_MED_phyloseq.rds")
 colnames(tax_table(ps))[7] <- "Strain"
 
 # 70 nodes (all)
@@ -317,104 +311,107 @@ p12
 ```
 
 
-## Save heatmaps
+# Save heatmaps
 
 ```{r warning=FALSE}
-setwd(path_plot)
-
-tiff("1Ed_MED_heatmap.tiff", units="in", width=28, height=16, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap.tiff", units="in", width=28, height=16, res=300)
 p1
 dev.off()
 
-tiff("1Ed_MED_heatmap_wolbachia.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_wolbachia.tiff", units="in", width=22, height=10, res=300)
 p2
 dev.off()
 
-tiff("1Ed_MED_heatmap_asaia.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_asaia.tiff", units="in", width=22, height=10, res=300)
 p3
 dev.off()
 
-tiff("1Ed_MED_heatmap_elizabethkingia.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_elizabethkingia.tiff", units="in", width=22, height=10, res=300)
 p4
 dev.off()
 
-tiff("1Ed_MED_heatmap_legionella.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_legionella.tiff", units="in", width=22, height=10, res=300)
 p5
 dev.off()
 
-tiff("1Ed_MED_heatmap_chryseobacterium.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_chryseobacterium.tiff", units="in", width=22, height=10, res=300)
 p6
 dev.off()
 
-tiff("1Ed_MED_heatmap_erwinia.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_erwinia.tiff", units="in", width=22, height=10, res=300)
 p7
 dev.off()
 
-tiff("1Ed_MED_heatmap_serratia.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_serratia.tiff", units="in", width=22, height=10, res=300)
 p8
 dev.off()
 
-tiff("1Ed_MED_heatmap_blanks_all.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_all.tiff", units="in", width=22, height=10, res=300)
 p9
 dev.off()
 
-tiff("1Ed_MED_heatmap_blanks_pseudomonas.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_pseudomonas.tiff", units="in", width=22, height=10, res=300)
 p10
 dev.off()
 
-tiff("1Ed_MED_heatmap_blanks_enhydrobacter.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_enhydrobacter.tiff", units="in", width=22, height=10, res=300)
 p11
 dev.off()
 
-tiff("1Ed_MED_heatmap_blanks_rahnella1.tiff", units="in", width=22, height=10, res=300)
+tiff("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_rahnella1.tiff", units="in", width=22, height=10, res=300)
 p12
 dev.off()
 
-png("1Ed_MED_heatmap.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap.png", units="in", width=22, height=10, res=300)
 p1
 dev.off()
 
-png("1Ed_MED_heatmap_wolbachia.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_wolbachia.png", units="in", width=22, height=10, res=300)
 p2
 dev.off()
 
-png("1Ed_MED_heatmap_asaia.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_asaia.png", units="in", width=22, height=10, res=300)
 p3
 dev.off()
 
-png("1Ed_MED_heatmap_elizabethkingia.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_elizabethkingia.png", units="in", width=22, height=10, res=300)
 p4
 dev.off()
 
-png("1Ed_MED_heatmap_legionella.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_legionella.png", units="in", width=22, height=10, res=300)
 p5
 dev.off()
 
-png("1Ed_MED_heatmap_chryseobacterium.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_chryseobacterium.png", units="in", width=22, height=10, res=300)
 p6
 dev.off()
 
-png("1Ed_MED_heatmap_erwinia.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_erwinia.png", units="in", width=22, height=10, res=300)
 p7
 dev.off()
 
-png("1Ed_MED_heatmap_serratia.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_serratia.png", units="in", width=22, height=10, res=300)
 p8
 dev.off()
 
-png("1Ed_MED_heatmap_blanks_all.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_all.png", units="in", width=22, height=10, res=300)
 p9
 dev.off()
 
-png("1Ed_MED_heatmap_blanks_pseudomonas.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_pseudomonas.png", units="in", width=22, height=10, res=300)
 p10
 dev.off()
 
-png("1Ed_MED_heatmap_blanks_enhydrobacter.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_enhydrobacter.png", units="in", width=22, height=10, res=300)
 p11
 dev.off()
 
-png("1Ed_MED_heatmap_blanks_rahnella1.png", units="in", width=22, height=10, res=300)
+png("../../../../output/1_MED/1E/1Ed_MED_heatmap_blanks_rahnella1.png", units="in", width=22, height=10, res=300)
 p12
 dev.off()
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
 ```

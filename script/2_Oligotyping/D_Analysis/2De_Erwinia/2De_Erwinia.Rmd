@@ -19,7 +19,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r message=FALSE, warning=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
@@ -34,10 +33,10 @@ invisible(lapply(packages, require, character.only = TRUE))
 ### Seqtab
 ```{r warning=FALSE}
 # move to oligotyping directory
-setwd(paste0(path_oligo,"/erwinia/oligotyping_Erwinia_sequences-c8-s1-a0.0-A0-M10"))
+path_erwinia <- "../../../../output/2_Oligotyping/2A/Erwinia/2A_oligotyping_Erwinia_sequences-c8-s1-a0.0-A0-M10"
 
 # load the matrix count table
-matrix_count <- read.table("MATRIX-COUNT.txt", header = TRUE) %>% t()
+matrix_count <- read.table(paste0(path_erwinia, "/MATRIX-COUNT.txt"), header = TRUE) %>% t()
 
 # arrange it
 colnames(matrix_count) <- matrix_count[1,]
@@ -52,11 +51,8 @@ matrix_count %>%
 
 ### Taxonomy
 ```{r warning=FALSE}
-# move to oligotyping directory
-setwd(paste0(path_oligo,"/erwinia/oligotyping_Erwinia_sequences-c8-s1-a0.0-A0-M10"))
-
 # load the fasta table
-fasta <- readDNAStringSet("OLIGO-REPRESENTATIVES.fasta")
+fasta <- readDNAStringSet(paste0(path_erwinia, "/OLIGO-REPRESENTATIVES.fasta"))
 
 # arrange it
 fasta <- fasta %>% as.data.frame()
@@ -75,11 +71,8 @@ fasta %>%
 ```{r warning=FALSE}
 # Reference file 
 
-## move to tsv directory
-setwd(path_tsv)
-
 ## load the reference table
-ref_oligo_med2 <- read.table("2B_REF_info_erwinia.tsv", sep="\t", header = TRUE)
+ref_oligo_med2 <- read.table("../../../../output/2_Oligotyping/2B/2B_REF_info_erwinia.tsv", sep="\t", header = TRUE)
 
 ## select only the 3 oligotypes of Erwinia
 ref_oligo_med2 <- ref_oligo_med2[!is.na(ref_oligo_med2$oligotype),]
@@ -130,7 +123,7 @@ fasta2 %>%
 ```
 ### Metadata
 ```{r}
-metadata <- read.csv(paste0(path_metadata,"/metadata_22_06_21.csv"), sep=";")
+metadata <- read.csv("../../../../metadata/metadata.csv", sep=";")
 rownames(metadata) <- metadata$Sample
 ```
 
@@ -161,8 +154,7 @@ ps
 
 #### Load ps with all samples (for final plot)
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ps.filter <- check_ps(ps.filter)
 ```
 
@@ -173,18 +165,18 @@ guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 16
 # add read depth in sample table of phyloseq object
 sample_data(ps.filter)$Read_depth <- sample_sums(ps.filter)
 
-# select Wolbachia
+# select Erwinia
 ps.erwinia <- ps.filter %>% subset_taxa(Genus=="Erwinia")
 
-# add read depth of Wolbachia
+# add read depth of Erwinia
 sample_data(ps.filter)$Read_erwinia <- sample_sums(ps.erwinia)
 sample_data(ps.filter) %>% colnames()
 sample_data(ps.erwinia) %>% colnames()
 
-# add percent of Wolbachia
+# add percent of Erwinia
 sample_data(ps.filter)$Percent_erwinia <- sample_data(ps.filter)$Read_erwinia / sample_data(ps.filter)$Read_depth
 
-# round the percent of Wolbachia at 2 decimals
+# round the percent of Erwinia at 2 decimals
 sample_data(ps.filter)$Percent_erwinia <- sample_data(ps.filter)$Percent_erwinia %>% round(2)
 
 # extract metadata table
@@ -203,6 +195,77 @@ new.metadata %>%
 # replace metadata in the created phyloseq object
 sample_data(ps) <- sample_data(new.metadata)
 ```
+
+#### Percent by oligotype
+```{r}
+# Oligotype AAGACTTA
+
+oligo_AAGACTTA <- ps %>% 
+  subset_taxa(ref=="oligotype_AAGACTTA (40) | size:38025 / node_N0798 (40) | size:38213")
+
+oligo_AAGACTTA <- prune_taxa(taxa_sums(oligo_AAGACTTA) >= 1, oligo_AAGACTTA)
+oligo_AAGACTTA <- prune_samples(sample_sums(oligo_AAGACTTA) >= 1, oligo_AAGACTTA)
+  
+oligo_AAGACTTA %>% taxa_sums() -> sum_oligo_1
+oligo_AAGACTTA@sam_data$Read_depth %>% sum() -> sum_total_1
+
+sum_oligo_1 / sum_total_1 *100 # 4.92%
+sum_oligo_1 / 6452623 *100 # 0.59%
+
+data.frame("Sample"=oligo_AAGACTTA@sam_data$Sample, 
+           "Read_tot" = oligo_AAGACTTA@sam_data$Read_depth,
+           "Read_AAGACTTA"=oligo_AAGACTTA %>% sample_sums(),
+           "Percent_AAGACTTA"=round((oligo_AAGACTTA %>% sample_sums() / oligo_AAGACTTA@sam_data$Read_depth *100),2)) -> df1
+
+mean(round((oligo_AAGACTTA %>% sample_sums() / oligo_AAGACTTA@sam_data$Read_depth *100),2))
+median(round((oligo_AAGACTTA %>% sample_sums() / oligo_AAGACTTA@sam_data$Read_depth *100),2))
+
+# Oligotype AAGACTTG
+
+oligo_AAGACTTG <- ps %>% 
+  subset_taxa(ref=="oligotype_AAGACTTG (22) | size:4594 / node_N0802 (22) | size:4627")
+
+oligo_AAGACTTG <- prune_taxa(taxa_sums(oligo_AAGACTTG) >= 1, oligo_AAGACTTG)
+oligo_AAGACTTG <- prune_samples(sample_sums(oligo_AAGACTTG) >= 1, oligo_AAGACTTG)
+  
+oligo_AAGACTTG %>% taxa_sums() -> sum_oligo_2
+oligo_AAGACTTG@sam_data$Read_depth %>% sum() -> sum_total_2
+
+sum_oligo_2 / sum_total_2 *100 # 1.29%
+sum_oligo_2 / 6452623 *100 # 0.07%
+
+data.frame("Sample"=oligo_AAGACTTG@sam_data$Sample, 
+           "Read_tot" = oligo_AAGACTTG@sam_data$Read_depth,
+           "Read_AAGACTTG"=oligo_AAGACTTG %>% sample_sums(),
+           "Percent_AAGACTTG"=round((oligo_AAGACTTG %>% sample_sums() / oligo_AAGACTTG@sam_data$Read_depth *100),2)) -> df2
+
+mean(round((oligo_AAGACTTG %>% sample_sums() / oligo_AAGACTTG@sam_data$Read_depth *100),2))
+median(round((oligo_AAGACTTG %>% sample_sums() / oligo_AAGACTTG@sam_data$Read_depth *100),2))
+
+# Oligotype TGAGTCGA
+
+oligo_TGAGTCGA <- ps %>% 
+  subset_samples(Organ=="Whole" & Strain!="Guadeloupe") %>%
+  subset_taxa(ref=="oligotype_TGAGTCGA (29) | size:7110 / node_N0311 (30) | size:8523")
+
+oligo_TGAGTCGA <- prune_taxa(taxa_sums(oligo_TGAGTCGA) >= 1, oligo_TGAGTCGA)
+oligo_TGAGTCGA <- prune_samples(sample_sums(oligo_TGAGTCGA) >= 1, oligo_TGAGTCGA)
+  
+oligo_TGAGTCGA %>% taxa_sums() -> sum_oligo_3 
+oligo_TGAGTCGA@sam_data$Read_depth %>% sum() -> sum_total_3 
+
+sum_oligo_3 / sum_total_3 *100 # 1.36%
+sum_oligo_3 / 6452623 *100 # 0.11%
+
+data.frame("Sample"=oligo_TGAGTCGA@sam_data$Sample, 
+           "Read_tot" = oligo_TGAGTCGA@sam_data$Read_depth,
+           "Read_TGAGTCGA"=oligo_TGAGTCGA %>% sample_sums(),
+           "Percent_TGAGTCGA"=round((oligo_TGAGTCGA %>% sample_sums() / oligo_TGAGTCGA@sam_data$Read_depth *100),2)) -> df3
+
+mean(round((oligo_TGAGTCGA %>% sample_sums() / oligo_TGAGTCGA@sam_data$Read_depth *100),2))
+median(round((oligo_TGAGTCGA %>% sample_sums() / oligo_TGAGTCGA@sam_data$Read_depth *100),2))
+```
+
 
 # Taxonomic structure
 
@@ -414,49 +477,6 @@ p3 <- ggplot(data_for_plot3, aes(x = Sample, y = Relative_Abundance, fill = Name
   labs(x="Sample", y="Relative abundance", fill="Oligotype / MED node")
 
 p3
-
-# ps.filter.ovary@otu_table # only 1 oligotype
-# 
-# a <- data.frame(ps.filter.ovary@sam_data)
-# b <- data.frame(ps.filter.ovary@tax_table)
-# count_table <- data.frame(ps.filter.ovary@otu_table)
-# 
-# count_table %>%
-#   kbl() %>%
-#   kable_paper("hover", full_width = F)
-# 
-# a$Relative_Abundance <- 1.0000000000
-# a$Name <- paste0(b$ref,".")
-# 
-# levels(a$Species)= c("Aedes aegypti"=make.italic("Aedes aegypti"),
-#                "Culex pipiens"=make.italic("Culex pipiens"),
-#                "Culex quinquefasciatus"=make.italic("Culex quinquefasciatus"))
-# 
-# levels(a$Strain) <- c("Bosc", "Camping~Europe", "Guadeloupe", "Lavar~(lab)", expression(paste(italic("Wolbachia"), "- (Slab TC)")))
-# 
-# p3 <- ggplot(a, aes(x = Sample, y = Relative_Abundance, fill = Name, species=Species, organ=Organ, Strain=Strain))+
-#   geom_bar(position = "stack", stat = "identity")+
-#   scale_fill_manual(values = "#FFFFCF")+
-#   theme_bw() +
-#   theme(axis.text.x = element_text(angle = 90)) +
-#   ggtitle("") +
-#   guide_italics+
-#   theme(legend.title = element_text(size = 20), 
-#         legend.position="bottom",
-#         legend.text = element_text(size=14),
-#         #legend.key.height = unit(1, 'cm'),
-#         panel.spacing.y=unit(1, "lines"), 
-#         panel.spacing.x=unit(0.8, "lines"),
-#         panel.spacing=unit(0,"lines"),
-#         strip.background=element_rect(color="grey30", fill="grey90"),
-#         strip.text.x = element_text(size = 16),
-#         panel.border=element_rect(color="grey90"),
-#         axis.ticks.x=element_blank(),
-#         axis.text.y = element_text(size=18)) +
-#  facet_wrap(~Species+Strain+Organ, scales = "free", ncol=3, labeller=label_parsed)+
-#   labs(x="Sample", y="Relative abundance", fill="Oligotype / MED Node")
-# 
-# p3
 ```
 
 ## Panels taxonomy of whole / ovary
@@ -477,54 +497,50 @@ p_taxo
 ## Save taxonomic plot
 
 ```{r warning=FALSE}
-setwd(path_plot)
-
-tiff("2De_OLIGO_counts_erwinia.tiff", units="in", width=20, height=18, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2De_OLIGO_counts_erwinia.tiff", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-tiff("2De_OLIGO_taxonomic_erwinia_whole.tiff", units="in", width=16, height=12, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2De_OLIGO_taxonomic_erwinia_whole.tiff", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-tiff("2De_OLIGO_taxonomic_erwinia_ovary.tiff", units="in", width=18, height=14, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2De_OLIGO_taxonomic_erwinia_ovary.tiff", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-tiff("2De_OLIGO_taxonomic_erwinia.tiff", units="in", width=18, height=16, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2De_OLIGO_taxonomic_erwinia.tiff", units="in", width=18, height=16, res=300)
 p_taxo
 dev.off()
 
-png("2De_OLIGO_counts_erwinia_big.png", units="in", width=20, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2De_OLIGO_counts_erwinia_big.png", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-png("2De_OLIGO_counts_erwinia_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2De_OLIGO_counts_erwinia_small.png", units="in", width=18, height=14, res=300)
 p_counts
 dev.off()
 
-png("2De_OLIGO_taxonomic_erwinia_whole.png", units="in", width=16, height=12, res=300)
+png("../../../../output/2_Oligotyping/2D/2De_OLIGO_taxonomic_erwinia_whole.png", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-png("2De_OLIGO_taxonomic_erwinia_ovary.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2De_OLIGO_taxonomic_erwinia_ovary.png", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-png("2De_OLIGO_taxonomic_erwinia_big.png", units="in", width=18, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2De_OLIGO_taxonomic_erwinia_big.png", units="in", width=18, height=18, res=300)
 p_taxo
 dev.off()
 
-png("2De_OLIGO_taxonomic_erwinia_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2De_OLIGO_taxonomic_erwinia_small.png", units="in", width=18, height=14, res=300)
 p_taxo
 dev.off()
 ```
 
 # Make main plot
 ```{r warning=FALSE, fig.height = 12, fig.width=18}
-setwd(paste0(path_oligo,"/erwinia/oligotyping_Erwinia_sequences-c8-s1-a0.0-A0-M10/HTML-OUTPUT"))
-
-img <- magick::image_read("entropy.png")
+img <- magick::image_read(paste0(path_erwinia, "/HTML-OUTPUT/entropy.png"))
 p_entropy <- magick::image_ggplot(img, interpolate = TRUE)
 p_entropy+ theme(plot.margin = unit(c(-7,-2.5,-7,-0.5), "cm"))
 p_entropy+ theme(plot.margin=unit(c(-7,-2,-12,-5), "mm"))
@@ -549,20 +565,20 @@ t_plot <- plot_grid(aligned,
 
 t_plot
 
-
-setwd(path_plot)
-
-tiff("2De_OLIGO_main_erwinia.tiff", width=36, height=36, res=300, units="in")
+tiff("../../../../output/2_Oligotyping/2D/2De_OLIGO_main_erwinia.tiff", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 
-png("2De_OLIGO_main_erwinia.png", width=36, height=36, res=300, units="in")
+png("../../../../output/2_Oligotyping/2D/2De_OLIGO_main_erwinia.png", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 ```
 
 
-
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
 
 
 

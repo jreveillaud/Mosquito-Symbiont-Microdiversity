@@ -19,7 +19,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r message=FALSE, warning=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
@@ -34,10 +33,10 @@ invisible(lapply(packages, require, character.only = TRUE))
 ### Seqtab
 ```{r warning=FALSE}
 # move to oligotyping directory
-setwd(paste0(path_oligo,"/elizabethkingia/oligotyping_Elizabethkingia_sequences-c1-s1-a0.0-A0-M10"))
+path_elizabeth <- "../../../../output/2_Oligotyping/2A/Elizabethkingia/2A_oligotyping_Elizabethkingia_sequences-c1-s1-a0.0-A0-M10"
 
 # load the matrix count table
-matrix_count <- read.table("MATRIX-COUNT.txt", header = TRUE) %>% t()
+matrix_count <- read.table(paste0(path_elizabeth, "/MATRIX-COUNT.txt"), header = TRUE) %>% t()
 
 # arrange it
 colnames(matrix_count) <- matrix_count[1,]
@@ -52,11 +51,8 @@ matrix_count %>%
 
 ### Taxonomy
 ```{r warning=FALSE}
-# move to oligotyping directory
-setwd(paste0(path_oligo,"/elizabethkingia/oligotyping_Elizabethkingia_sequences-c1-s1-a0.0-A0-M10"))
-
 # load the fasta table
-fasta <- readDNAStringSet("OLIGO-REPRESENTATIVES.fasta")
+fasta <- readDNAStringSet(paste0(path_elizabeth, "/OLIGO-REPRESENTATIVES.fasta"))
 
 # arrange it
 fasta <- fasta %>% as.data.frame()
@@ -75,11 +71,8 @@ fasta %>%
 ```{r warning=FALSE}
 # Reference file 
 
-## move to tsv directory
-setwd(path_tsv)
-
 ## load the reference table
-ref_oligo_med2 <- read.table("2B_REF_info_elizabethkingia.tsv", sep="\t", header = TRUE)
+ref_oligo_med2 <- read.table("../../../../output/2_Oligotyping/2B/2B_REF_info_elizabethkingia.tsv", sep="\t", header = TRUE)
 
 ## select only the 2 oligotypes of Elizabethkingia
 ref_oligo_med2 <- ref_oligo_med2[!is.na(ref_oligo_med2$oligotype),]
@@ -130,7 +123,7 @@ fasta2 %>%
 ```
 ### Metadata
 ```{r}
-metadata <- read.csv(paste0(path_metadata,"/metadata_22_06_21.csv"), sep=";")
+metadata <- read.csv("../../../../metadata/metadata.csv", sep=";")
 rownames(metadata) <- metadata$Sample
 ```
 
@@ -161,8 +154,7 @@ ps
 
 #### Load ps with all samples (for final plot)
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ps.filter <- check_ps(ps.filter)
 ```
 
@@ -173,18 +165,18 @@ guide_italics <- guides(fill = guide_legend(label.theme = element_text(size = 16
 # add read depth in sample table of phyloseq object
 sample_data(ps.filter)$Read_depth <- sample_sums(ps.filter)
 
-# select Wolbachia
+# select Elizabethkingia
 ps.elizabethkingia <- ps.filter %>% subset_taxa(Genus=="Elizabethkingia")
 
-# add read depth of Wolbachia
+# add read depth of Elizabethkingia
 sample_data(ps.filter)$Read_elizabethkingia <- sample_sums(ps.elizabethkingia)
 sample_data(ps.filter) %>% colnames()
 sample_data(ps.elizabethkingia) %>% colnames()
 
-# add percent of Wolbachia
+# add percent of Elizabethkingia
 sample_data(ps.filter)$Percent_elizabethkingia <- sample_data(ps.filter)$Read_elizabethkingia / sample_data(ps.filter)$Read_depth
 
-# round the percent of Wolbachia at 2 decimals
+# round the percent of Elizabethkingia at 2 decimals
 sample_data(ps.filter)$Percent_elizabethkingia <- sample_data(ps.filter)$Percent_elizabethkingia %>% round(2)
 
 # extract metadata table
@@ -443,54 +435,50 @@ p_taxo
 ## Save taxonomic plot
 
 ```{r warning=FALSE}
-setwd(path_plot)
-
-tiff("2Dd_OLIGO_counts_elizabethkingia.tiff", units="in", width=20, height=18, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_counts_elizabethkingia.tiff", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-tiff("2Dd_OLIGO_taxonomic_elizabethkingia_whole.tiff", units="in", width=16, height=12, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_taxonomic_elizabethkingia_whole.tiff", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-tiff("2Dd_OLIGO_taxonomic_elizabethkingia_ovary.tiff", units="in", width=18, height=14, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_taxonomic_elizabethkingia_ovary.tiff", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-tiff("2Dd_OLIGO_taxonomic_elizabethkingia.tiff", units="in", width=18, height=16, res=300)
+tiff("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_taxonomic_elizabethkingia.tiff", units="in", width=18, height=16, res=300)
 p_taxo
 dev.off()
 
-png("2Dd_OLIGO_counts_elizabethkingia_big.png", units="in", width=20, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_counts_elizabethkingia_big.png", units="in", width=20, height=18, res=300)
 p_counts
 dev.off()
 
-png("2Dd_OLIGO_counts_elizabethkingia_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_counts_elizabethkingia_small.png", units="in", width=18, height=14, res=300)
 p_counts
 dev.off()
 
-png("2Dd_OLIGO_taxonomic_elizabethkingia_whole.png", units="in", width=16, height=12, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_taxonomic_elizabethkingia_whole.png", units="in", width=16, height=12, res=300)
 p2
 dev.off()
 
-png("2Dd_OLIGO_taxonomic_elizabethkingia_ovary.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_taxonomic_elizabethkingia_ovary.png", units="in", width=18, height=14, res=300)
 p3
 dev.off()
 
-png("2Dd_OLIGO_taxonomic_elizabethkingia_big.png", units="in", width=18, height=18, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_taxonomic_elizabethkingia_big.png", units="in", width=18, height=18, res=300)
 p_taxo
 dev.off()
 
-png("2Dd_OLIGO_taxonomic_elizabethkingia_small.png", units="in", width=18, height=14, res=300)
+png("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_taxonomic_elizabethkingia_small.png", units="in", width=18, height=14, res=300)
 p_taxo
 dev.off()
 ```
 
 # Make main plot
 ```{r warning=FALSE, fig.height = 12, fig.width=18}
-setwd(paste0(path_oligo,"/elizabethkingia/oligotyping_Elizabethkingia_sequences-c1-s1-a0.0-A0-M10/HTML-OUTPUT"))
-
-img <- magick::image_read("entropy.png")
+img <- magick::image_read(paste0(path_elizabeth, "/HTML-OUTPUT/entropy.png"))
 p_entropy <- magick::image_ggplot(img, interpolate = TRUE)
 p_entropy+ theme(plot.margin = unit(c(-7,-2.5,-7,-0.5), "cm"))
 p_entropy+ theme(plot.margin=unit(c(-7,-2,-12,-5), "mm"))
@@ -516,19 +504,19 @@ t_plot <- plot_grid(aligned,
 t_plot
 
 
-setwd(path_plot)
-
-tiff("2Dd_OLIGO_main_elizabethkingia.tiff", width=36, height=36, res=300, units="in")
+tiff("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_main_elizabethkingia.tiff", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 
-png("2Dd_OLIGO_main_elizabethkingia.png", width=36, height=36, res=300, units="in")
+png("../../../../output/2_Oligotyping/2D/2Dd_OLIGO_main_elizabethkingia.png", width=36, height=36, res=300, units="in")
 t_plot
 dev.off()
 ```
 
-
-
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
 
 
 

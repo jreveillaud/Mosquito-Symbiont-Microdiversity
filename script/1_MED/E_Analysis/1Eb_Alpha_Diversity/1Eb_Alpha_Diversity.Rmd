@@ -8,8 +8,8 @@ output:
     gallery: false
     fig_caption: true
     highlight: tango
-    toc_depth: 3
-    code_folding: "hide"
+    toc_depth: 6
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
@@ -21,31 +21,28 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, warning=FALSE, message=FALSE}
 # Load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
 # Load supplementary packages
-packages <- c("multcomp", "openxlsx", "kableExtra")
+packages <- c("multcomp", "openxlsx", "kableExtra", "dplyr")
 invisible(lapply(packages, require, character.only = TRUE))
 ```
 
 # Load phyloseq object after decontam
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ```
 
-# Plots
+# Alpha diversity plots
 
 ## Whole 
 ```{r warning=FALSE}
 
-## whole samples
+# select whole samples
 ps.whole <- subset_samples(ps.filter, Organ=="Whole")
+ps.whole@sam_data %>% data.frame() -> test
 
-## plot
-
-### estimate alpha diversity
+# estimate alpha diversity
 
 measures <- c("Observed", "Chao1", "Shannon")
 
@@ -58,7 +55,7 @@ p1 <- plot_richness(ps.whole,
 # extract data from richness plot to custom it
 df <- p1$data
 
-# changer levels and order of species and location for plot
+# change levels and order of species and location for plot
 levels(df$Species) <- c("AA", "CP", "CQ")
 df$Species <- factor(df$Species, levels = c("AA", "CQ", "CP"))
 
@@ -70,9 +67,28 @@ new_location <- c("Field - Guadeloupe",
 df$Strain <- factor(df$Strain, levels = new_location)
 
 levels(df$Strain)
-# final plot
-p <- ggplot(df,aes(Species,value,colour=Strain)) +
-  facet_wrap(~ variable, drop=T,scale="free")+
+
+# convert df into data.table and set min and max for y-axis
+dat <- data.table::data.table(df)
+dat[, y_min := value*0.1, by = variable]
+dat[, y_max := value*1.1 , by = variable]
+dat[dat$variable=="Observed", "y_min"] <- 10
+dat[dat$variable=="Chao1", "y_min"] <- 10
+dat[dat$variable=="Observed", "y_max"] <- 55
+dat[dat$variable=="Chao1", "y_max"] <- 55
+#dat[dat$variable=="Shannon", "y_max"] <- 3
+
+# plot
+p <- ggplot(dat,aes(Species,value, color=Strain)) +
+  facet_wrap(~ variable, drop=T, scale="free_y")+
+  geom_boxplot(outlier.colour = NA, alpha=0.8, position = position_dodge2(width=1, preserve="single"))+
+  geom_point(size=1, aes(shape=dat$Strain), position=position_dodge(width=0.7, preserve='total'))+
+  scale_shape_manual("Strain", values = c(16,17,17,16,16),
+                     labels = c("Field - Guadeloupe", 
+                                expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), " -)")),
+                                "Laboratory - Lavar",
+                                "Field - Bosc", 
+                                "Field - Camping Europe"))+
   scale_color_manual("Strain", 
                      values=c("#00BF7D", "#5B6BF7", "#00B0F6", "#A3A500", "#F8766D"),
                      labels = c("Field - Guadeloupe", 
@@ -80,12 +96,15 @@ p <- ggplot(df,aes(Species,value,colour=Strain)) +
                                 "Laboratory - Lavar",
                                 "Field - Bosc", 
                                 "Field - Camping Europe"))+
-  geom_boxplot(outlier.colour = NA, alpha=0.8, position = position_dodge2(width=1, preserve="single")) +
-  geom_point(size=2, position=position_dodge(width=0.7, preserve='total'))+
   labs(x="Species", y = "Alpha Diversity Measure")+
-    theme(legend.text.align = 0)
+  theme(legend.text.align = 0)
+p 
 
-p
+# final plot with more space on y-axis
+p_bis <- p +
+  geom_blank(aes(y = y_min)) +
+  geom_blank(aes(y = y_max))
+p_bis
 ```
 
 ## Whole with rarefaction
@@ -93,29 +112,31 @@ p
 # Rarefaction with sample.size=100
 ps.whole2 <- ps.whole %>% rarefy_even_depth(rngseed=1, sample.size = 100)
 ps.whole2
+ps.whole2@sam_data %>% data.frame() -> test2
 compute_read_counts(ps.whole2)
 
-p2 <- alpha_div3(ps.whole2, measures)
+p2 <- alpha_div(ps.whole2, measures)
 p2
 
 
 ## Rarefaction with sample.size=1000
 ps.whole3 <- ps.whole %>% rarefy_even_depth(rngseed=2, sample.size = 1000)
 ps.whole3
+ps.whole3@sam_data %>% data.frame() -> test3
 compute_read_counts(ps.whole3)
 
-p3 <- alpha_div3(ps.whole3, measures)
+p3 <- alpha_div(ps.whole3, measures)
 p3
 
 ```
 
 ## Ovaries
 ```{r}
+# select ovary samples
 ps.ovary <- subset_samples(ps.filter, Organ=="Ovary")
 sample_data(ps.ovary)$Read_depth <- sample_sums(ps.ovary)
 
-
-## change factors and order in metadata
+# change factors and order in metadata
 metadata.ps <- data.frame(sample_data(ps.ovary))
 levels(metadata.ps$Strain)
 
@@ -126,10 +147,10 @@ levels(metadata.ps$Strain)
 metadata.ps$Strain <- droplevels(metadata.ps$Strain)
 levels(metadata.ps$Strain)
 
-## update metadata in phyloseq object
+# update metadata in phyloseq object
 sample_data(ps.ovary) <- metadata.ps
 
-
+# estimate alpha diversity
 p1 <- plot_richness(ps.ovary, 
                       x="Sample", 
                       color="Strain", 
@@ -168,7 +189,7 @@ p_ovary <- ggplot(df,aes(Species,value,colour=Strain)) +
 p_ovary
 ```
 
-## Mean of estimated alpha diversity
+# Mean of estimated alpha diversity
 ```{r}
 df_score <- data.frame(p$data)
 
@@ -221,23 +242,42 @@ df %>%
   kable_paper("hover", full_width = F)
 ```
 
-## Save plots
+# Save plots
 ```{r warning=FALSE}
-setwd(path_plot)
-tiff("1Eb_MED_alpha_diversity.tiff", units="in", width=8, height=5, res=300)
+tiff("../../../../output/1_MED/1E/1Eb_MED_alpha_diversity.tiff", units="in", width=8, height=5, res=300)
 p
 dev.off()
 
-png("1Eb_MED_alpha_diversity.png", units="in", width=8, height=5, res=300)
+png("../../../../output/1_MED/1E/1Eb_MED_alpha_diversity.png", units="in", width=8, height=5, res=300)
 p
+dev.off()
+
+pdf ( "../../../../output/1_MED/1E/1Eb_MED_alpha_diversity.pdf")
+p_bis
+dev.off()
+
+
+tiff("../../../../output/1_MED/1E/1Eb_MED_alpha_diversity_rare_100.tiff", units="in", width=8, height=5, res=300)
+p2
+dev.off()
+
+png("../../../../output/1_MED/1E/1Eb_MED_alpha_diversity_rare_100.png", units="in", width=8, height=5, res=300)
+p2
+dev.off()
+
+tiff("../../../../output/1_MED/1E/1Eb_MED_alpha_diversity_rare_1000.tiff", units="in", width=8, height=5, res=300)
+p3
+dev.off()
+
+png("../../../../output/1_MED/1E/1Eb_MED_alpha_diversity_rare_1000.png", units="in", width=8, height=5, res=300)
+p3
 dev.off()
 ```
 
+
 # Statistics 
 
-## Effect of depth sequencing (ANOVA / Tukey's test)
-
-### Select species
+## Prepare subdatasets for stats
 ```{r warning=FALSE}
 # Whole
 df <- p$data
@@ -256,118 +296,6 @@ df3 <- p3$data
 df3_culex <- df3[df3$Species!="AA",]
 df3_pipiens <- df3[df3$Species=="CP",]
 df3_quinque <- df3[df3$Species=="CQ",]
-```
-
-```{r eval=FALSE, include=FALSE}
-# Construire le modèle linéaire
-model  <- lm(value~ Strain, data = df_observed)
-# Créer un QQ plot des résidus
-ggpubr::ggqqplot(residuals(model))
-
-# Calculer le test de normalité de Shapiro-Wilk
-rstatix::shapiro_test(residuals(model))
-
-# homogénéité de la variance
-plot(model, 1)
-```
-
-
-
-### Effect of Species
-
-#### Observed
-```{r warning=FALSE}
-setwd(path_xlsx)
-
-# names for final array
-names <- c("Group", "Read_depth", "Group:Read_depth", "Residuals")
-names2 <- c("Group", "Read_depth", "Residuals")
-
-## Observed
-df_observed <- df[df$variable=="Observed"  & df$Field!="Lab ",]
-cat("OBSERVED\n\n")
-
-res <- lm(value~Species*Read_depth, data=df_observed) %>% anova()
-  # lm1 <- lm(value~var*effect, data=df)
-  # anova(lm1) -> result_anova
-res <- make_anova(df_observed, df_observed$Species, df_observed$value, df_observed$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
-
-
-wb <- createWorkbook()
-addWorksheet(wb, "Alpha diversity (depth seq)")
-
-writeData(wb, "Alpha diversity (depth seq)", "Effect of species in the field samples", startCol = 1, startRow = 1)
-writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 3)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 5)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 6, rowNames = TRUE)
-
-#saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-
-
-## Chao1
-df_chao <- df[df$variable=="Chao1"  & df$Field!="Lab ",]
-cat("CHAO1\n\n")
-res <- make_anova(df_chao, df_chao$Species, df_chao$value, df_chao$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
-
-writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 3)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 5)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 6, rowNames = TRUE)
-
-#saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-
-## Shannon
-df_shannon <- df[df$variable=="Shannon"  & df$Field!="Lab ",]
-cat("SHANNON\n\n")
-res <- make_anova(df_shannon, df_shannon$Species, df_shannon$value, df_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
-
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 3)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 5)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 6, rowNames = TRUE)
-
-## Shannon (rarefied, 100)
-df2_shannon <- df2[df2$variable=="Shannon"  & df2$Field!="Lab ",]
-cat("SHANNON\n\n")
-res <- make_anova(df2_shannon, df2_shannon$Species, df2_shannon$value, df2_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
-
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 25, startRow = 3)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 25, startRow = 5)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 25, startRow = 6, rowNames = TRUE)
-
-## Shannon (rarefied, 1000)
-df3_shannon <- df3[df3$variable=="Shannon"  & df3$Field!="Lab ",]
-cat("SHANNON\n\n")
-res <- make_anova(df3_shannon, df3_shannon$Species, df3_shannon$value, df3_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
-
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 33, startRow = 3)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 33, startRow = 5)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 33, startRow = 6, rowNames = TRUE)
-
-saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-```
-
-### Effect of tetracycline
-```{r warning=FALSE}
-setwd(path_xlsx)
 
 # Wolbachia- vs Wolbachia+
 df_culex_wolbachia <- df_culex[df_culex$Species=="CQ" & df_culex$Strain!="Laboratory - Lavar",]
@@ -377,168 +305,555 @@ df2_culex_wolbachia <- df2_culex[df_culex$Species=="CQ" & df2_culex$Strain!="Lab
 
 # Wolbachia- vs Wolbachia+ (rarefied 1000)
 df3_culex_wolbachia <- df3_culex[df_culex$Species=="CQ" & df3_culex$Strain!="Laboratory - Lavar",]
+```
+
+## Influence of depth sequencing
+
+### Effect of Species
+
+#### Observed
+
+```{r warning=FALSE}
+# names for final array
+names <- c("Group", "Read_depth", "Group:Read_depth", "Residuals")
+names2 <- c("Group", "Read_depth", "Residuals")
 
 ## Observed
-culex_observed <- df_culex_wolbachia[df_culex_wolbachia$variable=="Observed",]
-cat("OBSERVED\n\n")
-res <- make_anova(culex_observed, culex_observed$Strain, culex_observed$value, culex_observed$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+df_observed <- df[df$variable=="Observed"  & df$Field!="Lab ",]
 
-writeData(wb, "Alpha diversity (depth seq)", "Effect of tetracycline in the Culex quinquefasciatus samples", startCol = 1, startRow = 15)
-writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 17)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 19)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 20, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_observed)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
 
-## Chao1
-culex_chao <- df_culex_wolbachia[df_culex_wolbachia$variable=="Chao1",]
-cat("CHAO1\n\n")
-res <- make_anova(culex_chao, culex_chao$Strain, culex_chao$value, culex_chao$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+#### Excel
+wb <- createWorkbook()
+addWorksheet(wb, "Alpha diversity (depth seq)")
 
-writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 17)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 19)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 20, rowNames = TRUE)
+writeData(wb, "Alpha diversity (depth seq)", "Effect of species in the field samples", startCol = 1, startRow = 1)
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 6, rowNames = TRUE)
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+## Observed (rarefied 100)
+df_observed_100 <- df2[df$variable=="Observed"  & df2$Field!="Lab ",]
+
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_observed_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX (rarefied, 100)", startCol = 1, startRow = 13)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 15)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 16, rowNames = TRUE)
+
+## Observed (rarefied, 1000)
+df_observed_1000 <- df3[df3$variable=="Observed"  & df3$Field!="Lab ",]
+
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_observed_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX (rarefied, 1000)", startCol = 1, startRow = 23)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 25)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 26, rowNames = TRUE)
+```
+
+#### Chao1
+
+```{r warning=FALSE}
+# Chao1
+df_chao <- df[df$variable=="Chao1"  & df$Field!="Lab ",]
+
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_chao)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 6, rowNames = TRUE)
+
+# Chao1 (rarefied, 100)
+df_chao_100 <- df2[df2$variable=="Chao1"  & df2$Field!="Lab ",]
+
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_chao_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX (rarefied, 100)", startCol = 9, startRow = 13)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 15)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 16, rowNames = TRUE)
+
+## Chao (rarefied, 1000)
+df_chao_1000 <- df3[df3$variable=="Chao1"  & df3$Field!="Lab ",]
+
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_chao_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
 
 
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX (rarefied, 1000)", startCol = 9, startRow = 23)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 25)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 26, rowNames = TRUE)
+#saveWorkbook(wb, "Supplementary_Table_2_review_sheet1_30_11_21.xlsx", overwrite = TRUE)
+```
+
+#### Shannon
+```{r warning=FALSE}
 ## Shannon
-culex_shannon <- df_culex_wolbachia[df_culex_wolbachia$variable=="Shannon",]
-cat("SHANNON\n\n")
-res <- make_anova(culex_shannon, culex_shannon$Strain, culex_shannon$value, culex_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+df_shannon <- df[df$variable=="Shannon"  & df$Field!="Lab ",]
 
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 17)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 19)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 20, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_shannon)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 3)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 5)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 6, rowNames = TRUE)
 
 ## Shannon (rarefied, 100)
-culex_shannon <- df2_culex_wolbachia[df2_culex_wolbachia$variable=="Shannon",]
-cat("SHANNON\n\n")
-res <- make_anova(culex_shannon, culex_shannon$Strain, culex_shannon$value, culex_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+df_shannon_100 <- df2[df2$variable=="Shannon"  & df2$Field!="Lab ",]
 
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 25, startRow = 17)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 25, startRow = 19)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 25, startRow = 20, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_shannon_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 17, startRow = 13)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 15)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 16, rowNames = TRUE)
 
 ## Shannon (rarefied, 1000)
-culex_shannon <- df3_culex_wolbachia[df3_culex_wolbachia$variable=="Shannon",]
-cat("SHANNON\n\n")
-res <- make_anova(culex_shannon, culex_shannon$Strain, culex_shannon$value, culex_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names2
-res
+df_shannon_1000 <- df3[df3$variable=="Shannon"  & df3$Field!="Lab ",]
 
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 33, startRow = 17)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 33, startRow = 19)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 33, startRow = 20, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Species*Read_depth, data = df_shannon_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 17, startRow = 23)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 25)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 26, rowNames = TRUE)
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
+```
+
+### Effect of tetracycline
+
+#### Observed
+```{r warning=FALSE}
+## Observed
+df_observed<- df_quinque[df_quinque$variable=="Observed",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_observed)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "Effect of tetracycline in the Culex quinquefasciatus samples", startCol = 1, startRow = 35)
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 37)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 39)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 40, rowNames = TRUE)
+
+## Observed (rarefied 100)
+df_observed_100 <- df2_culex_wolbachia[df2_culex_wolbachia$variable=="Observed",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_observed_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX (rarefied, 100)", startCol = 1, startRow = 47)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 49)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 50, rowNames = TRUE)
+
+
+## Observed (rarefied, 1000)
+df_observed_1000 <- df3_culex_wolbachia[df3_culex_wolbachia$variable=="Observed",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_observed_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX (rarefied, 1000)", startCol = 1, startRow = 57)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 59)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 60, rowNames = TRUE)
+```
+
+#### Chao1
+
+```{r warning=FALSE}
+## Chao1
+df_chao <- df_quinque[df_quinque$variable=="Chao1",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_chao)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 37)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 39)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 40, rowNames = TRUE)
+
+## Chao1 (rarefied 100)
+df_chao_100 <- df2_culex_wolbachia[df2_culex_wolbachia$variable=="Chao1",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_chao_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX (rarefied, 100)", startCol = 9, startRow = 47)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 49)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 50, rowNames = TRUE)
+
+
+## Chao1 (rarefied, 1000)
+df_chao_1000 <- df3_culex_wolbachia[df3_culex_wolbachia$variable=="Chao1",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_chao_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+#ggpubr::ggqqplot(residuals(model))
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "CHAO INDEX (rarefied, 1000)", startCol = 9, startRow = 57)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 59)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 60, rowNames = TRUE)
+```
+
+#### Shannon
+
+```{r warning=FALSE}
+## Shannon
+df_shannon <- df_quinque[df_quinque$variable=="Shannon",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_shannon)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+#ggpubr::ggqqplot(residuals(model))
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 37)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 39)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 40, rowNames = TRUE)
+
+## Shannon (rarefied 100)
+df_shannon_100 <- df2_culex_wolbachia[df2_culex_wolbachia$variable=="Shannon",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_shannon_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 17, startRow = 47)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 49)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 50, rowNames = TRUE)
+
+## Shannon (rarefied, 1000)
+df_shannon_1000 <- df3_culex_wolbachia[df3_culex_wolbachia$variable=="Shannon",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_shannon_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 17, startRow = 57)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 59)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 60, rowNames = TRUE)
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 ### Effect of laboratory
+
+#### Observed
 ```{r warning=FALSE}
-setwd(path_xlsx)
-
-# Culex pipiens
-
 ## Observed
-pipiens_observed <- df_pipiens[df_pipiens$variable=="Observed",]
-cat("OBSERVED\n\n")
-res <- make_anova(pipiens_observed, pipiens_observed$Strain, pipiens_observed$value, pipiens_observed$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+df_observed <- df_pipiens[df_pipiens$variable=="Observed",]
 
-writeData(wb, "Alpha diversity (depth seq)", "Effect of lab and location in the Culex pipiens samples", startCol = 1, startRow = 29)
-writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 31)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 33)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 34, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_observed)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
 
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "Effect of lab and location in the Culex pipiens samples", startCol = 1, startRow = 68)
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX", startCol = 1, startRow = 70)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 71)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 72, rowNames = TRUE)
+
+## Observed (rarefied 100)
+df_observed_100 <- df2_pipiens[df2_pipiens$variable=="Observed",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_observed_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX (rarefied, 100)", startCol = 1, startRow = 79)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 81)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 82, rowNames = TRUE)
+
+## Observed (rarefied, 1000)
+df_observed_1000 <- df3_pipiens[df3_pipiens$variable=="Observed", ]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_observed_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "OBSERVED INDEX (rarefied, 1000)", startCol = 1, startRow = 89)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 1, startRow = 91)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 1, startRow = 92, rowNames = TRUE)
+```
+
+#### Chao1
+```{r warning=FALSE}
 ## Chao1
-pipiens_chao <- df_pipiens[df_pipiens$variable=="Chao1",]
-cat("CHAO1\n\n")
-res <- make_anova(pipiens_chao, pipiens_chao$Strain, pipiens_chao$value, pipiens_chao$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+df_chao <- df_pipiens[df_pipiens$variable=="Chao1",]
 
-writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 31)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 33)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 34, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_chao)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
 
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX", startCol = 9, startRow = 70)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 71)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 72, rowNames = TRUE)
+
+## Chao1 (rarefied 100)
+df_chao_100 <- df2_pipiens[df2_pipiens$variable=="Chao1",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_chao_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+writeData(wb, "Alpha diversity (depth seq)", "CHAO1 INDEX (rarefied, 100)", startCol = 9, startRow = 79)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 81)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 82, rowNames = TRUE)
+
+## Chao1 (rarefied, 1000)
+df_chao_1000 <- df3_pipiens[df3_pipiens$variable=="Chao1", ]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_chao_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "CHAO INDEX (rarefied, 1000)", startCol = 9, startRow = 89)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 9, startRow = 91)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 9, startRow = 92, rowNames = TRUE)
+```
+
+#### Shannon
+```{r warning=FALSE}
 ## Shannon
-pipiens_shannon <- df_pipiens[df_pipiens$variable=="Shannon",]
-cat("SHANNON\n\n")
-res <- make_anova(pipiens_shannon, pipiens_shannon$Strain, pipiens_shannon$value, pipiens_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+df_shannon <- df_pipiens[df_pipiens$variable=="Shannon",]
 
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 31)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 33)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 34, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_shannon)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
 
-## Shannon (rarefied, 100)
-pipiens_shannon <- df2_pipiens[df2_pipiens$variable=="Shannon",]
-cat("SHANNON\n\n")
-res <- make_anova(pipiens_shannon, pipiens_shannon$Strain, pipiens_shannon$value, pipiens_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
 
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 25, startRow = 31)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 25, startRow = 33)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 25, startRow = 34, rowNames = TRUE)
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX", startCol = 17, startRow = 70)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 71)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 72, rowNames = TRUE)
+
+
+## Shannon (rarefied 100)
+df_shannon_100 <- df2_pipiens[df2_pipiens$variable=="Shannon",]
+
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_shannon_100)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
+
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 100)", startCol = 17, startRow = 79)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 81)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 82, rowNames = TRUE)
 
 ## Shannon (rarefied, 1000)
-pipiens_shannon <- df3_pipiens[df3_pipiens$variable=="Shannon",]
-cat("SHANNON\n\n")
-res <- make_anova(pipiens_shannon, pipiens_shannon$Strain, pipiens_shannon$value, pipiens_shannon$Read_depth)
-res_anova <- res %>% as.data.frame()
-res_anova <- fill_significance(res_anova,"Pr(>F)")
-rownames(res_anova) <- names
-res
+df_shannon_1000 <- df3_pipiens[df3_pipiens$variable=="Shannon", ]
 
-writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 33, startRow = 31)
-writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 33, startRow = 33)
-writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 33, startRow = 34, rowNames = TRUE)
+#### Construct linear model
+model  <- lm(value~ Strain*Read_depth, data = df_shannon_1000)
+anova(model)-> res_anova
+res_anova <- res_anova %>% fill_significance("Pr(>F)")
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+#### Create residuals plot
+par(mfrow=c(2,2))
+plot(model)
+
+
+#### Excel
+writeData(wb, "Alpha diversity (depth seq)", "SHANNON INDEX (rarefied, 1000)", startCol = 17, startRow = 89)
+writeData(wb, "Alpha diversity (depth seq)", "ANOVA:", startCol = 17, startRow = 91)
+writeData(wb, "Alpha diversity (depth seq)", res_anova, startCol = 17, startRow = 92, rowNames = TRUE)
+
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 
-
-
-## True analysis
+## Analysis of alpha diversity
 
 ### Effect of species
+
+#### Observed
 ```{r warning=FALSE}
-setwd(path_xlsx)
 names <- c("Species", "Residuals")
 
 ## Observed
@@ -553,10 +868,7 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
-a <- make_anova(df=df_observed, var = df_observed$Strain, effect = df_observed$Species, value = df_observed$value)
-a
-
-wb <- loadWorkbook("Supplementary_Table_2.xlsx")
+### Excel
 addWorksheet(wb, "Alpha diversity")
 
 writeData(wb, "Alpha diversity", "Effect of species in the field samples", startCol = 1, startRow = 1)
@@ -565,10 +877,10 @@ writeData(wb, "Alpha diversity", "ANOVA:", startCol = 1, startRow = 5)
 writeData(wb, "Alpha diversity", res_anova, startCol = 1, startRow = 6, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 1, startRow = 11)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 1, startRow = 12, rowNames = TRUE)
+```
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-
-                  
+#### Chao1
+```{r warning=FALSE}                  
 ## Chao1
 df_chao <- df[df$variable=="Chao1"  & df$Field!="Lab ",]
 cat("CHAO1\n\n")
@@ -581,14 +893,16 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "CHAO1 INDEX", startCol = 9, startRow = 3)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 9, startRow = 5)
 writeData(wb, "Alpha diversity", res_anova, startCol = 9, startRow = 6, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 9, startRow = 11)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 9, startRow = 12, rowNames = TRUE)
+```
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-
+#### Shannon
+```{r warning=FALSE}
 ## Shannon
 df_shannon <- df[df$variable=="Shannon"  & df$Field!="Lab ",]
 cat("SHANNON\n\n")
@@ -600,25 +914,20 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "SHANNON INDEX", startCol = 17, startRow = 3)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 17, startRow = 5)
 writeData(wb, "Alpha diversity", res_anova, startCol = 17, startRow = 6, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 17, startRow = 11)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 17, startRow = 12, rowNames = TRUE)
-
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 ### Effect of tetracycline
 ```{r warning=FALSE}
-setwd(path_xlsx)
 names <- c("Strain", "Residuals")
 
-# Wolbachia- vs Wolbachia+
-df_culex_wolbachia <- df_culex[df_culex$Species=="CQ" & df_culex$Strain!="Lavar (labo)",]
-
 ## Observed
-culex_observed <- df_culex_wolbachia[df_culex_wolbachia$variable=="Observed",]
+culex_observed <- df_quinque[df_quinque$variable=="Observed",]
 cat("OBSERVED\n\n")
 res <- make_anova_tukey(culex_observed, culex_observed$Strain, culex_observed$value)
 res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
@@ -628,17 +937,19 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "Effect of tetracycline in the Culex quinquefasciatus samples", startCol = 1, startRow = 20)
 writeData(wb, "Alpha diversity", "OBSERVED INDEX", startCol = 1, startRow = 22)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 1, startRow = 24)
 writeData(wb, "Alpha diversity", res_anova, startCol = 1, startRow = 25, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 1, startRow = 30)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 1, startRow = 31, rowNames = TRUE)
+```
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-
+#### Chao1
+```{r warning=FALSE}
 ## Chao1
-culex_chao <- df_culex_wolbachia[df_culex_wolbachia$variable=="Chao1",]
+culex_chao <- df_quinque[df_quinque$variable=="Chao1",]
 cat("CHAO1\n\n")
 res <- make_anova_tukey(culex_chao, culex_chao$Strain, culex_chao$value)
 res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
@@ -648,17 +959,19 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "CHAO1 INDEX", startCol = 9, startRow = 22)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 9, startRow = 24)
 writeData(wb, "Alpha diversity", res_anova, startCol = 9, startRow = 25, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 9, startRow = 30)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 9, startRow = 31, rowNames = TRUE)
+```
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+#### Shannon
 
-
+```{r warning=FALSE}
 ## Shannon
-culex_shannon <- df_culex_wolbachia[df_culex_wolbachia$variable=="Shannon",]
+culex_shannon <- df_quinque[df_quinque$variable=="Shannon",]
 cat("SHANNON\n\n")
 res <- make_anova_tukey(culex_shannon, culex_shannon$Strain, culex_shannon$value)
 res_tukey <- glht.table(res[[2]]) %>% as.data.frame()
@@ -668,20 +981,18 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "SHANNON INDEX", startCol = 17, startRow = 22)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 17, startRow = 24)
 writeData(wb, "Alpha diversity", res_anova, startCol = 17, startRow = 25, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 17, startRow = 30)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 17, startRow = 31, rowNames = TRUE)
-
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
 
 ### Effect of lab in Culex pipiens samples
-```{r warning=FALSE}
-setwd(path_xlsx)
-# Culex pipiens
 
+#### Observed
+```{r warning=FALSE}
 ## Observed
 pipiens_observed <- df_pipiens[df_pipiens$variable=="Observed",]
 cat("OBSERVED\n\n")
@@ -693,15 +1004,17 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "Effect of lab (and location) in the Culex pipiens samples", startCol = 1, startRow = 37)
 writeData(wb, "Alpha diversity", "OBSERVED INDEX", startCol = 1, startRow = 39)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 1, startRow = 41)
 writeData(wb, "Alpha diversity", res_anova, startCol = 1, startRow = 42, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 1, startRow = 46)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 1, startRow = 47, rowNames = TRUE)
+```
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-
+#### Chao1
+```{r warning=FALSE}
 ## Chao1
 pipiens_chao <- df_pipiens[df_pipiens$variable=="Chao1",]
 cat("CHAO1\n\n")
@@ -713,14 +1026,16 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "CHAO1 INDEX", startCol = 9, startRow = 39)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 9, startRow = 41)
 writeData(wb, "Alpha diversity", res_anova, startCol = 9, startRow = 42, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 9, startRow = 46)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 9, startRow = 47, rowNames = TRUE)
+```
 
-##saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
-
+#### Shannon
+```{r warning=FALSE}
 ## Shannon
 pipiens_shannon <- df_pipiens[df_pipiens$variable=="Shannon",]
 cat("SHANNON\n\n")
@@ -732,11 +1047,20 @@ res_anova <- fill_significance(res_anova,"Pr(>F)")
 rownames(res_anova) <- names
 res
 
+### Excel
 writeData(wb, "Alpha diversity", "SHANNON INDEX", startCol = 17, startRow = 39)
 writeData(wb, "Alpha diversity", "ANOVA:", startCol = 17, startRow = 41)
 writeData(wb, "Alpha diversity", res_anova, startCol = 17, startRow = 42, rowNames = TRUE)
 writeData(wb, "Alpha diversity", "Tukey:", startCol = 17, startRow = 46)
 writeData(wb, "Alpha diversity", res_tukey, startCol = 17, startRow = 47, rowNames = TRUE)
 
-#saveWorkbook(wb, "Supplementary_Table_2.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "../../../../output/1_MED/1E/Supplementary_Table_2.xlsx", overwrite = TRUE)
 ```
+
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
+```
+
+

@@ -9,62 +9,43 @@ output:
     fig_caption: true
     highlight: tango
     toc_depth: 3
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Distribution
-
-## Paths and libraries setting
+# Paths and libraries setting
 
 ```{r, warning=FALSE, message=FALSE}
-# Load main packages, paths and custom functions
+# load main packages, paths and custom functions
 source("../../../source/main_packages.R")
-source("../../../source/paths.R")
 source("../../../source/functions.R")
 
-# Load supplementary packages
-packages <- c("cowplot")
+# load supplementary packages
+packages <- c("cowplot", "ranacapa")
 invisible(lapply(packages, require, character.only = TRUE))
 
-# Load supplementary functions
-scripts <- c("graphical_methods.R",
-             "tree_methods.R",
-             "plot_merged_trees.R",
-             "specificity_methods.R",
-             "ternary_plot.R",
-             "richness.R",
-             "edgePCA.R",
-             "copy_number_correction.R",
-             "import_frogs.R",
-             "prevalence.R",
-             "compute_niche.R",
-             "NCM_fit.R")
-urls <-
-  paste0("https://raw.githubusercontent.com/mahendra-mariadassou/phyloseq-extended/master/R/",
-         scripts)
-
-for (url in urls) {
-  source(url)
-}
+# create output folders if needed
+if (!dir.exists("../../../../output/1_MED/1E")) {dir.create("../../../../output/1_MED/1E")}
 ```
+
+# Distribution plot
 
 ## Load phyloseq object after decontam
 ```{r warning=FALSE}
-setwd(path_rdata)
-ps.filter <- readRDS("1D_MED_phyloseq_decontam.rds")
+ps.filter <- readRDS("../../../../output/1_MED/1D/1D_MED_phyloseq_decontam.rds")
 ```
 
-## Distribution plot
+## Plot
 ```{r}
-p0 <- distribution(ps.filter)
-p0
+p_dis <- distribution(ps.filter)
+p_dis
 ```
 
 
-# Rarefaction
+# Rarefaction plot
 
 ## Make rarefaction
 ```{r warning=FALSE, fig.height=8, fig.width=6}
@@ -83,58 +64,62 @@ levels(ps.filter@sam_data$Strain) <- c("Field - Bosc",
                                   expression(paste("Laboratory - Slab TC (", italic("Wolbachia"), "-)")))
 
 # without zoom
-p1 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Whole"))
-p2 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Ovary"))
+p1 <- rarefaction(ps.filter %>% subset_samples(Organ=="Whole"))
+p2 <- rarefaction(ps.filter %>% subset_samples(Organ=="Ovary"))
 
 # with zoom
-p3 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Whole"))+
+p3 <- rarefaction(ps.filter %>% subset_samples(Organ=="Whole"))+
   coord_cartesian(xlim=c(0,1000))
-p4 <- rarefaction2(ps.filter %>% subset_samples(Organ=="Ovary"))+
+p4 <- rarefaction(ps.filter %>% subset_samples(Organ=="Ovary"))+
   coord_cartesian(xlim=c(0,1000))
 
 # panels without zoom
-p_group <- plot_grid(p1+theme(legend.position="none"), 
+p_rar <- plot_grid(p1+theme(legend.position="none"), 
           p2+theme(legend.position="none"), 
           nrow=2, 
           ncol=1)+
     draw_plot_label(c("A", "B"), c(0, 0), c(1, 0.5), size = 15)
 
-p_group
+p_rar
 
 # panels with zoom
-p_group2 <- plot_grid(p3+theme(legend.position="none"), 
+p_rar2 <- plot_grid(p3+theme(legend.position="none"), 
           p4+theme(legend.position="none"), 
           nrow=2, 
           ncol=1)+
     draw_plot_label(c("A", "B"), c(0, 0), c(1, 0.5), size = 15)
 
-p_group2
+p_rar2
 ```
 
-## Save plots
+# Save plots
 ```{r warning=FALSE, message=FALSE}
-setwd(path_plot)
-tiff("1Ea-MED_ditribution.tiff", units="in", width=10, height=5, res=300)
-p0
+tiff("../../../../output/1_MED/1E/1Ea-MED_ditribution.tiff", units="in", width=10, height=5, res=300)
+p_dis
 dev.off()
 
-png("1Ea-MED_ditribution.png", units="in", width=10, height=5, res=300)
-p0
+png("../../../../output/1_MED/1E/1Ea-MED_ditribution.png", units="in", width=10, height=5, res=300)
+p_dis
 dev.off()
 
-tiff("1Ea-MED_rarefaction.tiff", units="in", width=8, height=10, res=300)
-p_group
+tiff("../../../../output/1_MED/1E/1Ea-MED_rarefaction.tiff", units="in", width=8, height=10, res=300)
+p_rar
 dev.off()
 
-tiff("1Ea-MED_rarefaction_zoom.tiff", units="in", width=8, height=10, res=300)
-p_group2
+tiff("../../../../output/1_MED/1E/1Ea-MED_rarefaction_zoom.tiff", units="in", width=8, height=10, res=300)
+p_rar2
 dev.off()
 
-png("1Ea-MED_rarefaction.png", units="in", width=8, height=10, res=300)
-p_group
+png("../../../../output/1_MED/1E/1Ea-MED_rarefaction.png", units="in", width=8, height=10, res=300)
+p_rar
 dev.off()
 
-png("1Ea-MED_rarefaction_zoom.png", units="in", width=8, height=10, res=300)
-p_group2
+png("../../../../output/1_MED/1E/1Ea-MED_rarefaction_zoom.png", units="in", width=8, height=10, res=300)
+p_rar2
 dev.off()
+```
+
+# Session info
+```{r warning=FALSE, message=FALSE}
+sessionInfo()
 ```
