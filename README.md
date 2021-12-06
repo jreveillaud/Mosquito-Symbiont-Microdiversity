@@ -1,8 +1,8 @@
 This project describes the bioinformatic reproductible workflow associated to the paper "Mosquito symbiont microdiversity as revealed by oligotyping". 
 
 ## Downloading the fastq files
-Before everything else, you need to download the data. 
-The raw illumina paired-end reads of 136 samples are stored in ENA and accesible with the accession number PRJEB43079. 
+Before everything else, you need to download the data and place it in a Data folder in the main directory. 
+The raw illumina paired-end reads of 136 samples are stored in ENA and accesible with the accession number PRJEB43079.
 
 ## Complete reproductible workflow
 
