@@ -87,6 +87,13 @@ write.table(df[,2], "../../../output/2_Oligotyping/2E/2E_only_fragments.tsv", se
 
 # Do the screening
 
+You need to download the data and process to a quality filtering as described in the manuscript. You also need to create a sample file with the 3 columns : 
+- name : sample name of each sample
+- r1 : path to R1 file of each sample (after quality filtering)
+- r2 : path to R2 file of each sample (after quality filtering)
+
+In the following commands, this file is named 'samples_wolbachia_screening.txt".
+
 ```{r engine='bash'}
 # load conda environment including illumina-utils
 source ~/opt/miniconda3/etc/profile.d/conda.sh
