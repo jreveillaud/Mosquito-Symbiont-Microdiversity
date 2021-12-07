@@ -87,7 +87,7 @@ write.table(df[,2], "../../../output/2_Oligotyping/2E/2E_only_fragments.tsv", se
 
 # Do the screening
 
-You need to download the data and process to a quality filtering as described in the manuscript (using the iu-filter-quality-minoche function from anvi'o with default parameters). You also need to create a sample file with the 3 columns : 
+You need to download the data and process to a quality filtering as described in the manuscript (using the iu-filter-quality-minoche function from anvi'o-7 with default parameters). You also need to create a sample file with the 3 columns : 
 - name : sample name of each sample
 - r1 : path to R1 file of each sample (after quality filtering)
 - r2 : path to R2 file of each sample (after quality filtering)
