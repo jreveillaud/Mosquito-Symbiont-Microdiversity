@@ -12,7 +12,7 @@ load_sequence_file <- function(path_input, filename){
   # sequence headers
   seq_name = names(fasta)
   
-  # keep only sample names and number of read
+  # keep only sample names and number of reads
   seq_name = sub("\\|.*", "", seq_name) 
   
   # sequences
@@ -129,7 +129,7 @@ prepare_data_for_oligotyping <- function(path_RDATA, path_MED, path_NODES, path_
 
   colnames(count_nodes) <- c("Node", "Count")
 
-  ## Export wolbachia sequences
+  ## Export Wolbachia sequences
   write.fasta(sequences=as.list(df$Seq), names=df$Sample, file.out=paste0(path_output, "2A_oligotyping_", genus, "_sequences.fasta"))
   write.table(count_nodes, paste0(path_output, "2A_MED_nodes_", genus, "_counts.tsv"), row.names=FALSE, quote=FALSE, sep="\t")
 }
